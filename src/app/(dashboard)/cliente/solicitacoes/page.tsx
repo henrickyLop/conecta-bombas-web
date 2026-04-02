@@ -160,15 +160,15 @@ export default function ClienteSolicitacoesPage() {
                 </div>
               )}
 
-              {selected.status === 'agendado' && (
+              {selected.status === 'agendado' && selected.telefone_dono && (
                 <a
-                  href={whatsappLink(selected.telefone_cliente || '')}
+                  href={whatsappLink(selected.telefone_dono)}
                   target="_blank"
                   rel="noopener noreferrer"
                 >
                   <Button className="w-full bg-green-600 hover:bg-green-700 text-white">
                     <MessageSquare size={18} className="mr-2" />
-                    Conversar via WhatsApp
+                    Conversar com {selected.nome_dono_bomba}
                   </Button>
                 </a>
               )}

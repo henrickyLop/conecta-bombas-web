@@ -110,6 +110,7 @@ export default function ClienteBuscarPage() {
         uid_dono_bomba: selectedBomba.uid_dono,
         nome_dono_bomba: selectedBomba.nome_dono,
         uid_bomba: selectedBomba.id,
+        telefone_dono: selectedBomba.telefone_dono || '',
         capacidade: selectedBomba.capacidade,
         volume: parseFloat(volume),
         data_servico: dataServico,

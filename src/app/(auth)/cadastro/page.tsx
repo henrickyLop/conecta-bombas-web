@@ -87,6 +87,7 @@ export default function CadastroPage() {
           tipo: tipoBomba,
           capacidade: capacidadeBomba,
           status: 'pendente',
+          telefone_dono: telefone || '',
         });
         if (bombaError) throw bombaError;
       }

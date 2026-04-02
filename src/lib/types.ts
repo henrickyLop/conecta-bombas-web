@@ -32,6 +32,7 @@ export type Solicitacao = {
   telefone_cliente: string;
   uid_dono_bomba: string;
   nome_dono_bomba: string;
+  telefone_dono: string;
   uid_bomba: string;
   capacidade: string;
   volume: number;
