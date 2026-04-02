@@ -272,7 +272,7 @@ export default function CadastroPage() {
                   </div>
                   <div>
                     <Label htmlFor="capacidadeBomba" className="text-[#1A1A2E]">
-                      Capacidade (litros/hora)
+                      Capacidade da Bomba
                     </Label>
                     <select
                       id="capacidadeBomba"
@@ -282,7 +282,7 @@ export default function CadastroPage() {
                       required
                     >
                       {['500', '1000', '2000'].map((cap) => (
-                        <option key={cap} value={cap}>{cap} L/h</option>
+                        <option key={cap} value={cap}>{cap}</option>
                       ))}
                     </select>
                   </div>
@@ -302,7 +302,6 @@ export default function CadastroPage() {
               )}
             </Button>
           </form>
-        </form>
 
         <p className="text-center text-gray-500 text-sm mt-6">
           Já tem conta?{' '}
