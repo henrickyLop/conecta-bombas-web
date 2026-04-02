@@ -7,13 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+
 import {
   Dialog,
   DialogContent,
@@ -166,17 +160,17 @@ export default function ClienteBuscarPage() {
             </div>
             <div className="w-full sm:w-32">
               <Label htmlFor="estado" className="text-[#1A1A2E]">Estado</Label>
-              <Select value={estado || 'todos'} onValueChange={(v) => setEstado(v === 'todos' ? '' : v)}>
-                <SelectTrigger className="mt-1 text-[#1A1A2E]">
-                  <SelectValue placeholder="UF" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todos">Todos</SelectItem>
-                  {ESTADOS_BR.map(uf => (
-                    <SelectItem key={uf} value={uf}>{uf}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <select
+                id="estado"
+                value={estado || 'todos'}
+                onChange={(e) => setEstado(e.target.value === 'todos' ? '' : e.target.value)}
+                className="mt-1 w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-[#1A1A2E] text-sm"
+              >
+                <option value="todos">Todos</option>
+                {ESTADOS_BR.map((uf) => (
+                  <option key={uf} value={uf}>{uf}</option>
+                ))}
+              </select>
             </div>
             <Button
               onClick={buscarBombas}

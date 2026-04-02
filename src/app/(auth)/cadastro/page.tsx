@@ -14,13 +14,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, User, Truck } from 'lucide-react';
 import { toast } from 'sonner';
@@ -207,18 +200,18 @@ export default function CadastroPage() {
                 <Label htmlFor="estado" className="text-[#1A1A2E]">
                   Estado
                 </Label>
-                <Select value={estado} onValueChange={(v) => v && setEstado(v)}>
-                  <SelectTrigger className="mt-1.5 text-[#1A1A2E]">
-                    <SelectValue placeholder="UF" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ESTADOS_BR.map((uf) => (
-                      <SelectItem key={uf} value={uf}>
-                        {uf}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <select
+                  id="estado"
+                  value={estado}
+                  onChange={(e) => setEstado(e.target.value)}
+                  className="mt-1.5 w-full h-10 rounded-md border border-input bg-background px-3 text-[#1A1A2E] text-sm"
+                  required
+                >
+                  <option value="" disabled hidden>UF</option>
+                  {ESTADOS_BR.map((uf) => (
+                    <option key={uf} value={uf}>{uf}</option>
+                  ))}
+                </select>
               </div>
             </div>
 
@@ -243,16 +236,17 @@ export default function CadastroPage() {
                     <Label htmlFor="capacidadeBomba" className="text-[#1A1A2E]">
                       Capacidade (litros/hora)
                     </Label>
-                    <Select value={capacidadeBomba} onValueChange={(v) => v && setCapacidadeBomba(v)}>
-                      <SelectTrigger className="mt-1.5 text-[#1A1A2E]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="500">500 L/h</SelectItem>
-                        <SelectItem value="1000">1000 L/h</SelectItem>
-                        <SelectItem value="2000">2000 L/h</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <select
+                      id="capacidadeBomba"
+                      value={capacidadeBomba}
+                      onChange={(e) => setCapacidadeBomba(e.target.value)}
+                      className="mt-1.5 w-full h-10 rounded-md border border-input bg-background px-3 text-[#1A1A2E] text-sm"
+                      required
+                    >
+                      {['500', '1000', '2000'].map((cap) => (
+                        <option key={cap} value={cap}>{cap} L/h</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
               </div>
