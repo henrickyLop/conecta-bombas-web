@@ -14,7 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
 import { Loader2, User, Truck } from 'lucide-react';
 import { toast } from 'sonner';
 import { ESTADOS_BR } from '@/lib/types';
@@ -109,19 +109,35 @@ export default function CadastroPage() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Tabs value={tipo} onValueChange={(v) => setTipo(v as 'cliente' | 'dono_bomba')}>
-          <TabsList className="grid w-full grid-cols-2 mb-6">
-            <TabsTrigger value="cliente" className="flex items-center gap-2">
-              <User size={16} />
-              Cliente
-            </TabsTrigger>
-            <TabsTrigger value="dono_bomba" className="flex items-center gap-2">
-              <Truck size={16} />
-              Dono de Bomba
-            </TabsTrigger>
-          </TabsList>
+        {/* Simple toggle instead of Tabs (Tabs broken on mobile) */}
+        <div className="flex w-full mb-6 bg-gray-100 rounded-xl p-1">
+          <button
+            type="button"
+            onClick={() => setTipo('cliente')}
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all ${
+              tipo === 'cliente'
+                ? 'bg-white text-[#1A1A2E] shadow-sm'
+                : 'text-gray-500'
+            }`}
+          >
+            <User size={16} />
+            Cliente
+          </button>
+          <button
+            type="button"
+            onClick={() => setTipo('dono_bomba')}
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all ${
+              tipo === 'dono_bomba'
+                ? 'bg-white text-[#1A1A2E] shadow-sm'
+                : 'text-gray-500'
+            }`}
+          >
+            <Truck size={16} />
+            Dono de Bomba
+          </button>
+        </div>
 
-          <form onSubmit={handleCadastro} className="space-y-4">
+        <form onSubmit={handleCadastro} className="space-y-4">
             <div>
               <Label htmlFor="nome" className="text-[#1A1A2E]">
                 {tipo === 'cliente' ? 'Nome Completo' : 'Razão Social / Nome'}
@@ -286,7 +302,7 @@ export default function CadastroPage() {
               )}
             </Button>
           </form>
-        </Tabs>
+        </form>
 
         <p className="text-center text-gray-500 text-sm mt-6">
           Já tem conta?{' '}
