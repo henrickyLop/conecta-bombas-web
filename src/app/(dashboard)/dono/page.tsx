@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { supabase } from '@/lib/supabase-client';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,16 +20,15 @@ import {
 } from 'recharts';
 import {
   Loader2, Check, X, Clock, Calendar, User, Phone, MessageSquare,
-  CheckCircle, ClipboardList, Eye, ArrowRight, History
+  CheckCircle, ClipboardList, Eye, History
 } from 'lucide-react';
+import Link from 'next/link';
 import { toast } from 'sonner';
 import type { Solicitacao } from '@/lib/types';
 
-// Normalize old status values
 function normalizeStatus(s: Solicitacao): Solicitacao {
   if (s.status === 'aceita') return { ...s, status: 'agendado' };
   if (s.status === 'recusada') return { ...s, status: 'cancelado' };
-  if (s.status === 'pendente' && s.status !== 'pendente') return { ...s, status: 'agendado' };
   return s;
 }
 
@@ -59,7 +57,6 @@ export default function DonoDashboardPage() {
         .select('*')
         .eq('uid_dono_bomba', usuario!.id)
         .order('criado_em', { ascending: false });
-
       if (error) throw error;
       const normalized = (data as Solicitacao[] || []).map(normalizeStatus);
       setTodas(normalized);
@@ -76,6 +73,7 @@ export default function DonoDashboardPage() {
       const { error } = await supabase.from('solicitacoes').update({ status: newStatus }).eq('id', id);
       if (error) throw error;
       const msg = newStatus === 'agendado' ? 'Aceita!' : newStatus === 'finalizado' ? 'Finalizado!' : 'Cancelado.';
+      toast.success(msg);
       setSelected(null);
       loadData();
     } catch (e: any) {
@@ -101,10 +99,10 @@ export default function DonoDashboardPage() {
   const canceladas = todas.filter(s => s.status === 'cancelado');
 
   const chartData = [
-    { name: 'Aguardando', valor: pendentes.length },
-    { name: 'Agendadas', valor: agendadas.length },
-    { name: 'Finalizadas', valor: finalizadas.length },
-    { name: 'Canceladas', valor: canceladas.length },
+    { name: 'Aguard.', valor: pendentes.length },
+    { name: 'Agend.', valor: agendadas.length },
+    { name: 'Final.', valor: finalizadas.length },
+    { name: 'Cancel.', valor: canceladas.length },
   ];
 
   if (authLoading || !usuario) {
@@ -115,45 +113,142 @@ export default function DonoDashboardPage() {
     );
   }
 
+  // --- Card de solicitação pendente (mobile-first) ---
+  function PendenteCard({ s }: { s: Solicitacao }) {
+    return (
+      <Card className="border-l-4 border-l-amber-500">
+        <CardContent className="p-3 sm:p-4 space-y-3">
+          {/* Info */}
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-amber-100 flex-shrink-0 flex items-center justify-center">
+              <Clock size={18} className="text-amber-600" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold text-[#1A1A2E] truncate text-sm">{s.nome_cliente}</p>
+              <p className="text-xs text-gray-500">{s.volume}m³ · {s.data_servico} {s.hora_servico}</p>
+            </div>
+          </div>
+          {/* Actions */}
+          <div className="flex gap-2 items-center">
+            <Badge className="bg-amber-100 text-amber-700 text-[10px] sm:text-xs shrink-0">
+              Aguardando
+            </Badge>
+            <div className="flex gap-2 ml-auto">
+              <Button
+                size="sm"
+                className="bg-green-600 hover:bg-green-700 text-[11px] h-7 sm:h-8 px-2 sm:px-3"
+                onClick={() => updateStatus(s.id, 'agendado')}
+                disabled={actionLoading}
+              >
+                <Check size={12} className="sm:size-14" /> Aceitar
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-red-600 border-red-200 text-[11px] h-7 sm:h-8 px-2 sm:px-3"
+                onClick={() => updateStatus(s.id, 'cancelado')}
+                disabled={actionLoading}
+              >
+                <X size={12} className="sm:size-14" /> Recusar
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-gray-500 text-[11px] h-7 sm:h-8 px-1 sm:px-2"
+                onClick={() => setSelected(s)}
+              >
+                <Eye size={14} />
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // --- Card genérico com detalhes ---
+  function GenericCard({ s, badge, badgeCls, actionLabel, actionColor, actionStatus }: {
+    s: Solicitacao; badge: string; badgeCls: string;
+    actionLabel?: string; actionColor?: string; actionStatus?: string;
+  }) {
+    return (
+      <Card className={`border-l-4 ${'border-l-' + (badgeCls === 'bg-amber-100 text-amber-700' ? 'amber-500' : badgeCls === 'bg-green-100 text-green-700' ? 'green-500' : badgeCls === 'bg-red-100 text-red-700' ? 'red-500' : 'blue-500')}`}>
+        <CardContent className="p-3 sm:p-4">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className={`w-9 h-9 rounded-lg flex-shrink-0 flex items-center justify-center ${badgeCls === 'bg-amber-100 text-amber-700' ? 'bg-orange-100' : badgeCls === 'bg-green-100 text-green-700' ? 'bg-green-100' : 'bg-red-100'}`}>
+                {badgeCls.includes('orange') || badgeCls.includes('amber') ? (
+                  <CheckCircle size={18} className="text-[#FF6B00]" />
+                ) : badgeCls.includes('green') ? (
+                  <CheckCircle size={18} className="text-green-600" />
+                ) : (
+                  <X size={18} className="text-red-600" />
+                )}
+              </div>
+              <div className="min-w-0">
+                <p className="font-semibold text-[#1A1A2E] truncate text-sm">{s.nome_cliente}</p>
+                <p className="text-xs text-gray-500">{s.volume}m³ · {s.data_servico}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <Badge className={`${badgeCls} text-[10px] sm:text-xs`}>{badge}</Badge>
+              {actionLabel && actionStatus && (
+                <Button
+                  size="sm"
+                  className={`${actionColor || 'bg-green-600'} text-[11px] h-7 sm:h-8 px-2`}
+                  onClick={() => updateStatus(s.id, actionStatus)}
+                >
+                  <CheckCircle size={12} className="mr-0.5" /> {actionLabel}
+                </Button>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
-    <div>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-[#1A1A2E]">Dashboard</h1>
-        <p className="text-gray-500 mt-1">Olá, {usuario.nome}</p>
+    <div className="max-w-4xl mx-auto">
+      <div className="mb-6">
+        <h1 className="text-2xl sm:text-3xl font-bold text-[#1A1A2E]">Dashboard</h1>
+        <p className="text-gray-500 mt-1 text-sm">Olá, {usuario.nome}</p>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      {/* Stats 2x2 mobile */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         <Card className="border-l-4 border-l-amber-500">
-          <CardHeader className="pb-2"><CardTitle className="text-sm text-gray-500">Aguardando</CardTitle></CardHeader>
-          <CardContent><div className="text-3xl font-bold text-[#1A1A2E]">{pendentes.length}</div></CardContent>
+          <CardHeader className="pb-1 pt-3 px-3"><CardTitle className="text-xs text-gray-500">Aguardando</CardTitle></CardHeader>
+          <CardContent className="pt-0 px-3 pb-3"><div className="text-2xl font-bold text-[#1A1A2E]">{pendentes.length}</div></CardContent>
         </Card>
         <Card className="border-l-4 border-l-[#FF6B00]">
-          <CardHeader className="pb-2"><CardTitle className="text-sm text-gray-500">Agendadas</CardTitle></CardHeader>
-          <CardContent><div className="text-3xl font-bold text-[#1A1A2E]">{agendadas.length}</div></CardContent>
+          <CardHeader className="pb-1 pt-3 px-3"><CardTitle className="text-xs text-gray-500">Agendadas</CardTitle></CardHeader>
+          <CardContent className="pt-0 px-3 pb-3"><div className="text-2xl font-bold text-[#1A1A2E]">{agendadas.length}</div></CardContent>
         </Card>
         <Card className="border-l-4 border-l-green-500">
-          <CardHeader className="pb-2"><CardTitle className="text-sm text-gray-500">Finalizadas</CardTitle></CardHeader>
-          <CardContent><div className="text-3xl font-bold text-[#1A1A2E]">{finalizadas.length}</div></CardContent>
+          <CardHeader className="pb-1 pt-3 px-3"><CardTitle className="text-xs text-gray-500">Finalizadas</CardTitle></CardHeader>
+          <CardContent className="pt-0 px-3 pb-3"><div className="text-2xl font-bold text-[#1A1A2E]">{finalizadas.length}</div></CardContent>
         </Card>
         <Card className="border-l-4 border-l-blue-500">
-          <CardHeader className="pb-2"><CardTitle className="text-sm text-gray-500">Total</CardTitle></CardHeader>
-          <CardContent><div className="text-3xl font-bold text-[#1A1A2E]">{todas.length}</div></CardContent>
+          <CardHeader className="pb-1 pt-3 px-3"><CardTitle className="text-xs text-gray-500">Total</CardTitle></CardHeader>
+          <CardContent className="pt-0 px-3 pb-3"><div className="text-2xl font-bold text-[#1A1A2E]">{todas.length}</div></CardContent>
         </Card>
       </div>
 
       {/* Chart */}
       {todas.length > 0 && (
-        <Card className="mb-8">
-          <CardHeader><CardTitle className="text-[#1A1A2E] text-lg">Visão Geral</CardTitle></CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={220}>
+        <Card className="mb-6">
+          <CardHeader className="pb-2 pt-3 px-3 sm:px-6">
+            <CardTitle className="text-[#1A1A2E] text-sm sm:text-lg">Visão Geral</CardTitle>
+          </CardHeader>
+          <CardContent className="px-1 pb-3 sm:px-6">
+            <ResponsiveContainer width="100%" height={180}>
               <BarChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#6b7280' }} />
-                <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#6b7280' }} />
-                <Tooltip contentStyle={{ backgroundColor: '#1A1A2E', border: 'none', borderRadius: '8px', color: '#fff' }} />
-                <Bar dataKey="valor" radius={[6, 6, 0, 0]} maxBarSize={60}>
+                <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#6b7280' }} />
+                <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: '#6b7280' }} />
+                <Tooltip contentStyle={{ backgroundColor: '#1A1A2E', border: 'none', borderRadius: '8px', color: '#fff', fontSize: '12px' }} />
+                <Bar dataKey="valor" radius={[4, 4, 0, 0]} maxBarSize={40}>
                   <Cell fill="#f59e0b" />
                   <Cell fill="#FF6B00" />
                   <Cell fill="#22c55e" />
@@ -167,11 +262,19 @@ export default function DonoDashboardPage() {
 
       {/* Tabs */}
       <Tabs defaultValue="pendentes">
-        <TabsList className="grid w-full grid-cols-4 mb-6">
-          <TabsTrigger value="pendentes">Aguardando ({pendentes.length})</TabsTrigger>
-          <TabsTrigger value="agendadas">Agendadas ({agendadas.length})</TabsTrigger>
-          <TabsTrigger value="finalizadas">Finalizadas ({finalizadas.length})</TabsTrigger>
-          <TabsTrigger value="canceladas">Canceladas ({canceladas.length})</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-4 gap-0.5 mb-4 sm:mb-6 h-auto p-1 bg-gray-100 rounded-lg">
+          <TabsTrigger value="pendentes" className="text-[9px] sm:text-xs leading-tight data-[state=active]:bg-white">
+            Aguard. ({pendentes.length})
+          </TabsTrigger>
+          <TabsTrigger value="agendadas" className="text-[9px] sm:text-xs leading-tight data-[state=active]:bg-white">
+            Agend. ({agendadas.length})
+          </TabsTrigger>
+          <TabsTrigger value="finalizadas" className="text-[9px] sm:text-xs leading-tight data-[state=active]:bg-white">
+            Final. ({finalizadas.length})
+          </TabsTrigger>
+          <TabsTrigger value="canceladas" className="text-[9px] sm:text-xs leading-tight data-[state=active]:bg-white">
+            Cancel. ({canceladas.length})
+          </TabsTrigger>
         </TabsList>
 
         {/* PENDENTES */}
@@ -179,16 +282,16 @@ export default function DonoDashboardPage() {
           {loading ? (
             <div className="space-y-3">{[1,2,3].map(i => <Skeleton key={i} className="h-20 w-full rounded-xl" />)}</div>
           ) : pendentes.length === 0 ? (
-            <Card><CardContent className="p-12 text-center">
-              <Clock size={48} className="text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-[#1A1A2E]">Nenhuma solicitação aguardando</h3>
-              <p className="text-gray-500 mt-1">Novas solicitações aparecerão aqui</p>
-            </CardContent></Card>
+            <Card>
+              <CardContent className="p-8 sm:p-12 text-center">
+                <Clock size={40} className="text-gray-300 mx-auto mb-3" />
+                <h3 className="text-base font-semibold text-[#1A1A2E]">Nenhuma solicitação aguardando</h3>
+                <p className="text-gray-500 mt-1 text-sm">Novas solicitações aparecerão aqui</p>
+              </CardContent>
+            </Card>
           ) : (
             <div className="space-y-3">
-              {pendentes.map(s => (
-                <SolicitacaoCard key={s.id} s={s} onView={() => setSelected(s)} onAccept={() => updateStatus(s.id, 'agendado')} onDecline={() => updateStatus(s.id, 'cancelado')} />
-              ))}
+              {pendentes.map(s => <PendenteCard key={s.id} s={s} />)}
             </div>
           )}
         </TabsContent>
@@ -196,48 +299,20 @@ export default function DonoDashboardPage() {
         {/* AGENDADAS */}
         <TabsContent value="agendadas">
           {agendadas.length === 0 ? (
-            <Card><CardContent className="p-12 text-center">
-              <CheckCircle size={48} className="text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-[#1A1A2E]">Nenhuma ordem agendada</h3>
-            </CardContent></Card>
+            <Card>
+              <CardContent className="p-8 sm:p-12 text-center">
+                <CheckCircle size={40} className="text-gray-300 mx-auto mb-3" />
+                <h3 className="text-base font-semibold text-[#1A1A2E]">Nenhuma ordem agendada</h3>
+              </CardContent>
+            </Card>
           ) : (
             <div className="space-y-3">
               {agendadas.map(s => (
-                <Card key={s.id} className="hover:shadow-md border-l-4 border-l-[#FF6B00]">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between flex-wrap gap-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center">
-                          <CheckCircle size={18} className="text-[#FF6B00]" />
-                        </div>
-                        <div>
-                          <p className="font-semibold text-[#1A1A2E]">{s.nome_cliente}</p>
-                          <p className="text-sm text-gray-500">{s.volume}m³ · Bomba {cleanCap(s.capacidade)}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="text-right text-sm text-gray-500">
-                          <p>{s.data_servico}</p>
-                          <p>{s.hora_servico}</p>
-                        </div>
-                        <Badge className="bg-orange-100 text-orange-700">Agendada</Badge>
-                        <Button size="sm" variant="outline" onClick={() => setSelected(s)}>
-                          <Eye size={14} className="mr-1" /> Ver
-                        </Button>
-                        <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => updateStatus(s.id, 'finalizado')}>
-                          <CheckCircle size={14} className="mr-1" /> Finalizar
-                        </Button>
-                        {s.telefone_dono && (
-                          <a href={`https://wa.me/${formatPhone(s.telefone_cliente)}`} target="_blank" rel="noopener noreferrer">
-                            <Button size="sm" variant="outline" className="text-green-600 border-green-200">
-                              <MessageSquare size={14} />
-                            </Button>
-                          </a>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                <GenericCard
+                  key={s.id} s={s}
+                  badge="Agendada" badgeCls="bg-orange-100 text-orange-700"
+                  actionLabel="Finalizar" actionStatus="finalizado" actionColor="bg-green-600"
+                />
               ))}
             </div>
           )}
@@ -246,29 +321,16 @@ export default function DonoDashboardPage() {
         {/* FINALIZADAS */}
         <TabsContent value="finalizadas">
           {finalizadas.length === 0 ? (
-            <Card><CardContent className="p-12 text-center">
-              <History size={48} className="text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-[#1A1A2E]">Nenhum serviço finalizado</h3>
-            </CardContent></Card>
+            <Card>
+              <CardContent className="p-8 sm:p-12 text-center">
+                <History size={40} className="text-gray-300 mx-auto mb-3" />
+                <h3 className="text-base font-semibold text-[#1A1A2E]">Nenhum serviço finalizado</h3>
+              </CardContent>
+            </Card>
           ) : (
             <div className="space-y-3">
               {finalizadas.map(s => (
-                <Card key={s.id} className="border-l-4 border-l-green-500 bg-green-50/50">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between flex-wrap gap-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
-                          <CheckCircle size={18} className="text-green-600" />
-                        </div>
-                        <div>
-                          <p className="font-semibold text-[#1A1A2E]">{s.nome_cliente}</p>
-                          <p className="text-sm text-gray-500">{s.volume}m³ · {s.data_servico}</p>
-                        </div>
-                      </div>
-                      <Badge className="bg-green-100 text-green-700">Finalizada</Badge>
-                    </div>
-                  </CardContent>
-                </Card>
+                <GenericCard key={s.id} s={s} badge="Finalizada" badgeCls="bg-green-100 text-green-700" />
               ))}
             </div>
           )}
@@ -277,29 +339,16 @@ export default function DonoDashboardPage() {
         {/* CANCELADAS */}
         <TabsContent value="canceladas">
           {canceladas.length === 0 ? (
-            <Card><CardContent className="p-12 text-center">
-              <X size={48} className="text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-[#1A1A2E]">Nenhuma cancelada</h3>
-            </CardContent></Card>
+            <Card>
+              <CardContent className="p-8 sm:p-12 text-center">
+                <X size={40} className="text-gray-300 mx-auto mb-3" />
+                <h3 className="text-base font-semibold text-[#1A1A2E]">Nenhuma cancelada</h3>
+              </CardContent>
+            </Card>
           ) : (
             <div className="space-y-3">
               {canceladas.map(s => (
-                <Card key={s.id} className="border-l-4 border-l-red-500 bg-red-50/50">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between flex-wrap gap-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center">
-                          <X size={18} className="text-red-600" />
-                        </div>
-                        <div>
-                          <p className="font-semibold text-[#1A1A2E]">{s.nome_cliente}</p>
-                          <p className="text-sm text-gray-500">{s.volume}m³ · {s.data_servico}</p>
-                        </div>
-                      </div>
-                      <Badge className="bg-red-100 text-red-700">Cancelada</Badge>
-                    </div>
-                  </CardContent>
-                </Card>
+                <GenericCard key={s.id} s={s} badge="Cancelada" badgeCls="bg-red-100 text-red-700" />
               ))}
             </div>
           )}
@@ -348,7 +397,7 @@ export default function DonoDashboardPage() {
                     {actionLoading ? <Loader2 className="animate-spin" size={18} /> : <><Check size={16} className="mr-1" /> Aceitar</>}
                   </Button>
                   <Button onClick={() => updateStatus(selected.id, 'cancelado')} disabled={actionLoading} variant="destructive" className="flex-1">
-                    <X size={14} className="mr-1" /> Recusar
+                    Recusar
                   </Button>
                 </div>
               )}
@@ -372,38 +421,5 @@ export default function DonoDashboardPage() {
         </DialogContent>
       </Dialog>
     </div>
-  );
-}
-
-function SolicitacaoCard({ s, onView, onAccept, onDecline }: { s: Solicitacao; onView: () => void; onAccept: () => void; onDecline: () => void }) {
-  return (
-    <Card className="hover:shadow-md transition-shadow cursor-pointer border-l-4 border-l-amber-500" onClick={onView}>
-      <CardContent className="p-4">
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center">
-              <Clock size={18} className="text-amber-600" />
-            </div>
-            <div>
-              <p className="font-semibold text-[#1A1A2E]">{s.nome_cliente}</p>
-              <p className="text-sm text-gray-500">{s.volume}m³</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="text-right text-sm text-gray-500">
-              <p>{s.data_servico}</p>
-              <p>{s.hora_servico}</p>
-            </div>
-            <Badge className="bg-amber-100 text-amber-700">Aguardando</Badge>
-            <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={e => { e.stopPropagation(); onAccept(); }}>
-              <Check size={14} className="mr-1" /> Aceitar
-            </Button>
-            <Button size="sm" variant="destructive" onClick={e => { e.stopPropagation(); onDecline(); }}>
-              <X size={14} className="mr-1" /> Recusar
-            </Button>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
   );
 }
