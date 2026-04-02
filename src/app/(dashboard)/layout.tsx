@@ -1,5 +1,6 @@
 import Sidebar from '@/components/Sidebar';
 import AuthGuard from '@/components/AuthGuard';
+import OnboardingModal from '@/components/OnboardingModal';
 
 export default function DashboardLayout({
   children,
@@ -8,6 +9,7 @@ export default function DashboardLayout({
 }) {
   return (
     <AuthGuard type="auth">
+      <OnboardingModal />
       <div className="min-h-screen bg-[#FAFAFA]">
         <Sidebar />
         <div className="lg:ml-64 pt-14 lg:pt-0">

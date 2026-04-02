@@ -11,7 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { Loader2, Check, X, Clock, Calendar, User, Phone, MessageSquare, CheckCircle, ClipboardList, Eye, History } from 'lucide-react';
+import { Loader2, Check, X, Clock, Calendar, User, Phone, MessageSquare, CheckCircle, ClipboardList, Eye, History, Star, TrendingUp, CalendarDays } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Solicitacao } from '@/lib/types';
 
@@ -29,6 +29,7 @@ export default function DonoDashboardPage() {
   const [activeTab, setActiveTab] = useState('pendentes');
   const [actionLoading, setActionLoading] = useState(false);
   const [selected, setSelected] = useState<Solicitacao | null>(null);
+  const [meusNumeros, setMeusNumeros] = useState({ servicosMes: 0, taxaAceitacao: 0, avaliacaoMedia: 0, semanaServicos: [] as { semana: string; total: number; aceitas: number; finalizadas: number }[] });
 
   // Read URL hash for tab
   useEffect(() => {
@@ -46,6 +47,7 @@ export default function DonoDashboardPage() {
     if (usuario && usuario.tipo !== 'dono_bomba') { router.push('/'); return; }
     if (!usuario) return;
     loadData();
+    loadMeusNumeros();
   }, [usuario, router]);
 
   async function loadData() {
@@ -59,6 +61,80 @@ export default function DonoDashboardPage() {
       setTodas((data as Solicitacao[] || []).map(normalizeStatus));
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
+  }
+
+  async function loadMeusNumeros() {
+    if (!usuario?.id) return;
+    try {
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
+      const startOfMonthStr = startOfMonth.toISOString().split('T')[0];
+
+      // Serviços este mês
+      const { data: mesData } = await supabase
+        .from('solicitacoes')
+        .select('id, status')
+        .eq('uid_dono_bomba', usuario.id)
+        .gte('criado_em', startOfMonthStr);
+
+      // Taxa de aceitação (aceitas / total recebidas, excluindo pendentes)
+      const { data: todasSol } = await supabase
+        .from('solicitacoes')
+        .select('id, status')
+        .eq('uid_dono_bomba', usuario.id)
+        .not('status', 'eq', 'pendente');
+
+      // Avaliação média
+      const { data: avaliacoes } = await supabase
+        .from('avaliacoes')
+        .select('nota')
+        .eq('uid_avaliado', usuario.id);
+
+      const avgNota = avaliacoes && avaliacoes.length > 0
+        ? avaliacoes.reduce((sum, a) => sum + a.nota, 0) / avaliacoes.length
+        : 0;
+
+      const totalDecididas = todasSol?.length ?? 0;
+      const aceitas = todasSol?.filter((s: any) => s.status === 'agendado' || s.status === 'finalizado').length ?? 0;
+      const taxaAceitacao = totalDecididas > 0 ? Math.round((aceitas / totalDecididas) * 100) : 0;
+
+      // Serviços por semana (last 4 weeks)
+      const semana: { semana: string; total: number; aceitas: number; finalizadas: number }[] = [];
+      for (let i = 3; i >= 0; i--) {
+        const endOfWeek = new Date();
+        endOfWeek.setDate(endOfWeek.getDate() - (i * 7));
+        endOfWeek.setHours(23, 59, 59, 999);
+        const startOfWeek = new Date(endOfWeek);
+        startOfWeek.setDate(startOfWeek.getDate() - 6);
+        startOfWeek.setHours(0, 0, 0, 0);
+
+        const { data } = await supabase
+          .from('solicitacoes')
+          .select('status, criado_em')
+          .eq('uid_dono_bomba', usuario.id)
+          .gte('criado_em', startOfWeek.toISOString().split('T')[0])
+          .lte('criado_em', endOfWeek.toISOString().split('T')[0]);
+
+        const weekData = data ?? [];
+        const weekLabel = startOfWeek.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+        semana.push({
+          semana: `Sem ${4 - i}`,
+          total: weekData.length,
+          aceitas: weekData.filter((s: any) => s.status === 'agendado' || s.status === 'finalizado').length,
+          finalizadas: weekData.filter((s: any) => s.status === 'finalizado').length,
+        });
+      }
+
+      setMeusNumeros({
+        servicosMes: mesData?.length ?? 0,
+        taxaAceitacao,
+        avaliacaoMedia: parseFloat(avgNota.toFixed(1)),
+        semanaServicos: semana,
+      });
+    } catch (e) {
+      console.error('Erro ao carregar Meus Números:', e);
+    }
   }
 
   async function updateStatus(id: string, ns: 'agendado' | 'finalizado' | 'cancelado') {
@@ -236,6 +312,52 @@ export default function DonoDashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Meus Números */}
+      <Card className="bg-white border-0 shadow-sm rounded-xl mb-5">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-[#1A1A2E] text-base flex items-center gap-2">
+            <TrendingUp size={18} className="text-[#FF6B00]" /> Meus Números
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-3 gap-3 mb-4">
+            <div className="bg-orange-50 rounded-xl p-3 text-center">
+              <CalendarDays size={18} className="text-[#FF6B00] mx-auto mb-1" />
+              <p className="text-[10px] text-[#9CA3AF] uppercase">Serviços este mês</p>
+              <p className="text-lg font-bold text-[#1A1A2E]">{meusNumeros.servicosMes}</p>
+            </div>
+            <div className="bg-green-50 rounded-xl p-3 text-center">
+              <CheckCircle size={18} className="text-green-600 mx-auto mb-1" />
+              <p className="text-[10px] text-[#9CA3AF] uppercase">Taxa de aceitação</p>
+              <p className="text-lg font-bold text-[#1A1A2E]">{meusNumeros.taxaAceitacao > 0 ? `${meusNumeros.taxaAceitacao}%` : '—'}</p>
+            </div>
+            <div className="bg-amber-50 rounded-xl p-3 text-center">
+              <Star size={18} className="text-amber-500 mx-auto mb-1" />
+              <p className="text-[10px] text-[#9CA3AF] uppercase">Avaliação média</p>
+              <p className="text-lg font-bold text-[#1A1A2E]">
+                {meusNumeros.avaliacaoMedia > 0 ? `${meusNumeros.avaliacaoMedia} ⭐` : '—'}
+              </p>
+            </div>
+          </div>
+          {meusNumeros.semanaServicos.some((s: any) => s.total > 0) && (
+            <div className="pt-2">
+              <p className="text-xs text-[#9CA3AF] mb-2">Serviços por semana (últimas 4)</p>
+              <ResponsiveContainer width="100%" height={140}>
+                <BarChart data={meusNumeros.semanaServicos}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                  <XAxis dataKey="semana" tick={{ fontSize: 10, fill: '#9ca3af' }} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: '#9ca3af' }} />
+                  <Tooltip contentStyle={{ backgroundColor: '#1a1a2e', border: 'none', borderRadius: 8, color: '#fff', fontSize: 12 }} />
+                  <Bar dataKey="total" name="Total" radius={[4, 4, 0, 0]} fill="#FF6B00" maxBarSize={32} />
+                  <Bar dataKey="aceitas" name="Aceitas" radius={[4, 4, 0, 0]} fill="#22c55e" maxBarSize={32} />
+                  <Bar dataKey="finalizadas" name="Finalizadas" radius={[4, 4, 0, 0]} fill="#f59e0b" maxBarSize={32} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Chart */}
       {todas.length > 0 && (

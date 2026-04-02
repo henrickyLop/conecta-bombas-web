@@ -17,7 +17,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Loader2, Truck, MapPin, Settings, Search, CheckCircle } from 'lucide-react';
+import { Loader2, Truck, MapPin, Settings, Search, CheckCircle, Heart } from 'lucide-react';
 import { ESTADOS_BR } from '@/lib/types';
 import type { Bomba } from '@/lib/types';
 import { getCityCoords, averageCenter } from '@/lib/city-coords';
@@ -56,6 +56,8 @@ export default function ClienteBuscarPage() {
   const [horaServico, setHoraServico] = useState('');
   const [observacoes, setObservacoes] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  // Favorites
+  const [favoritos, setFavoritos] = useState<Array<{ uid_dono: string; nome_dono: string; cidade: string; estado: string }>>([]);
 
   // Cidades do estado selecionado
   const cidadesDoEstado = useMemo(() => {
@@ -100,6 +102,34 @@ export default function ClienteBuscarPage() {
     }
     setSelectedBomba(bomba);
     setDialogOpen(true);
+  }
+
+  // Favorites helpers
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('conecta_favoritos');
+      if (stored) setFavoritos(JSON.parse(stored));
+    } catch {}
+  }, []);
+
+  function toggleFavorito(bomba: Bomba) {
+    setFavoritos(prev => {
+      const exists = prev.find(f => f.uid_dono === bomba.uid_dono);
+      let next: typeof prev;
+      if (exists) {
+        next = prev.filter(f => f.uid_dono !== bomba.uid_dono);
+        toast.info(`${bomba.nome_dono} removido dos favoritos`);
+      } else {
+        next = [...prev, { uid_dono: bomba.uid_dono, nome_dono: bomba.nome_dono, cidade: bomba.cidade, estado: bomba.estado }];
+        toast.success(`${bomba.nome_dono} adicionado aos favoritos ❤️`);
+      }
+      localStorage.setItem('conecta_favoritos', JSON.stringify(next));
+      return next;
+    });
+  }
+
+  function isFavorito(uid_dono: string) {
+    return favoritos.some(f => f.uid_dono === uid_dono);
   }
 
   async function enviarSolicitacao() {
@@ -248,7 +278,20 @@ export default function ClienteBuscarPage() {
                     <div className="w-10 h-10 rounded-lg bg-[#FF6B00]/10 flex items-center justify-center">
                       <Truck size={18} className="text-[#FF6B00]" />
                     </div>
-                    <Badge className="bg-green-100 text-green-700">Disponível</Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge className="bg-green-100 text-green-700">Disponível</Badge>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); toggleFavorito(b); }}
+                        className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+                        title={isFavorito(b.uid_dono) ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+                      >
+                        {isFavorito(b.uid_dono) ? (
+                          <Heart size={20} className="text-red-500 fill-red-500" />
+                        ) : (
+                          <Heart size={20} className="text-gray-400" />
+                        )}
+                      </button>
+                    </div>
                   </div>
                   <h3 className="font-semibold text-[#1A1A2E]">{b.nome_dono}</h3>
                   <div className="space-y-2 mt-3 text-sm text-[#4B5563]">

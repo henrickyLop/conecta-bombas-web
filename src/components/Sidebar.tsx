@@ -17,8 +17,10 @@ import {
   Check,
   CheckCircle,
   Ban,
+  Heart,
+  User,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const menuMap: Record<string, { icon: React.ReactNode; label: string; href: string }[]> = {
   admin: [
@@ -27,11 +29,14 @@ const menuMap: Record<string, { icon: React.ReactNode; label: string; href: stri
     { icon: <Settings size={20} />, label: 'Usuários', href: '/admin/usuarios' },
     { icon: <Truck size={20} />, label: 'Bombas', href: '/admin/bombas' },
     { icon: <ClipboardList size={20} />, label: 'Ordens', href: '/admin/ordens' },
+    { icon: <User size={20} />, label: 'Meu Perfil', href: '/perfil' },
   ],
   cliente: [
     { icon: <LayoutDashboard size={20} />, label: 'Dashboard', href: '/cliente' },
     { icon: <Search size={20} />, label: 'Buscar Bombas', href: '/cliente/buscar' },
+    { icon: <Heart size={20} />, label: 'Favoritos', href: '/cliente/favoritos' },
     { icon: <ClipboardList size={20} />, label: 'Solicitações', href: '/cliente/solicitacoes' },
+    { icon: <User size={20} />, label: 'Meu Perfil', href: '/perfil' },
   ],
   dono: [
     { icon: <LayoutDashboard size={20} />, label: 'Aguardando', href: '/dono#pendentes' },
@@ -39,6 +44,7 @@ const menuMap: Record<string, { icon: React.ReactNode; label: string; href: stri
     { icon: <CheckCircle size={20} />, label: 'Finalizadas', href: '/dono#finalizadas' },
     { icon: <Ban size={20} />, label: 'Canceladas', href: '/dono#canceladas' },
     { icon: <ClipboardList size={20} />, label: 'Histórico', href: '/dono/historico' },
+    { icon: <User size={20} />, label: 'Meu Perfil', href: '/perfil' },
   ],
 };
 
@@ -51,6 +57,19 @@ export default function Sidebar() {
   if (!usuario) return null;
 
   const menu = menuMap[usuario.tipo] || [];
+
+  // Mobile online/offline indicator
+  const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   const sidebarContent = (
     <div className="flex h-full flex-col bg-[#0F172A] text-white w-full">
@@ -85,6 +104,14 @@ export default function Sidebar() {
           );
         })}
       </nav>
+
+      {/* Mobile Online/Offline indicator — only in mobile drawer */}
+      <div className="px-3 pb-2 lg:hidden">
+        <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs ${isOnline ? 'bg-green-900/30 text-green-300' : 'bg-red-900/30 text-red-300'}`}>
+          <span>{isOnline ? '🟢' : '🔴'}</span>
+          <span>{isOnline ? 'Online' : 'Offline'}</span>
+        </div>
+      </div>
 
       {/* Bottom */}
       <div className="px-3 py-4 border-t border-white/10">
