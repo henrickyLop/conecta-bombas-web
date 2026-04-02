@@ -73,7 +73,7 @@ export default function ClienteBuscarPage() {
     try {
       let query = supabase.from('bombas').select('*').eq('status', 'aprovado');
       if (cidade) query = query.ilike('cidade', `%${cidade}%`);
-      if (estado) query = query.eq('estado', estado);
+      if (estado && estado !== 'todos') query = query.eq('estado', estado);
       const { data, error } = await query.order('criado_em', { ascending: false });
       if (error) throw error;
       setBombas(data as Bomba[] || []);
@@ -166,12 +166,12 @@ export default function ClienteBuscarPage() {
             </div>
             <div className="w-full sm:w-32">
               <Label htmlFor="estado" className="text-[#1A1A2E]">Estado</Label>
-              <Select value={estado} onValueChange={(v) => v && setEstado(v)}>
+              <Select value={estado || 'todos'} onValueChange={(v) => setEstado(v === 'todos' ? '' : v)}>
                 <SelectTrigger className="mt-1 text-[#1A1A2E]">
                   <SelectValue placeholder="UF" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos</SelectItem>
+                  <SelectItem value="todos">Todos</SelectItem>
                   {ESTADOS_BR.map(uf => (
                     <SelectItem key={uf} value={uf}>{uf}</SelectItem>
                   ))}

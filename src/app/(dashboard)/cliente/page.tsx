@@ -205,10 +205,16 @@ export default function ClientePage() {
                   </div>
                   <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                     s.status === 'agendado' ? 'bg-amber-100 text-amber-700' :
+                    s.status === 'aceita' ? 'bg-amber-100 text-amber-700' :
+                    s.status === 'pendente' ? 'bg-amber-100 text-amber-700' :
+                    s.status === 'finalizado' ? 'bg-green-100 text-green-700' :
                     s.status === 'cancelado' ? 'bg-red-100 text-red-700' :
+                    s.status === 'recusada' ? 'bg-red-100 text-red-700' :
                     'bg-green-100 text-green-700'
                   }`}>
-                    {s.status === 'agendado' ? 'Agendada' : s.status === 'cancelado' ? 'Cancelada' : 'Finalizada'}
+                    {s.status === 'agendado' || s.status === 'aceita' || s.status === 'pendente' ? 'Agendada' : 
+                     s.status === 'finalizado' ? 'Finalizada' : 
+                     s.status === 'cancelado' || s.status === 'recusada' ? 'Cancelada' : 'Agendada'}
                   </span>
                 </div>
               ))}
