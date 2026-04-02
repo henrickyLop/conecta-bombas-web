@@ -7,10 +7,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, MapPin, Users, Truck, ClipboardList } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase-client';
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
+} from 'recharts';
 
 export default function AdminPage() {
   const { usuario, loading } = useAuth();
-  const [stats, setStats] = useState({ pendentes: 0, clientes: 0, donos: 0, ordens: 0 });
+  const [stats, setStats] = useState({ pendentes: 0, clientes: 0, donos: 0, ordens: 0, ordensAgendado: 0, ordensFinalizado: 0 });
   const [loadingStats, setLoadingStats] = useState(true);
   const router = useRouter();
 
@@ -23,17 +26,21 @@ export default function AdminPage() {
 
     async function loadStats() {
       try {
-        const [uRes, bRes, oRes] = await Promise.all([
+        const [uRes, bRes, oRes, oStatusRes] = await Promise.all([
           supabase.from('usuarios').select('id, tipo, status'),
           supabase.from('bombas').select('id'),
           supabase.from('ordens').select('id'),
+          supabase.from('ordens').select('id, status'),
         ]);
 
+        const ordensData = oStatusRes.data ?? [];
         setStats({
           pendentes: (uRes.data ?? []).filter((u: any) => u.status === 'pendente').length,
           clientes: (uRes.data ?? []).filter((u: any) => u.tipo === 'cliente').length,
           donos: (uRes.data ?? []).filter((u: any) => u.tipo === 'dono_bomba').length,
           ordens: (oRes.data ?? []).length,
+          ordensAgendado: ordensData.filter((o: any) => o.status === 'agendado').length,
+          ordensFinalizado: ordensData.filter((o: any) => o.status === 'finalizado').length,
         });
       } catch (e) {
         console.error('Stats error:', e);
@@ -134,6 +141,91 @@ export default function AdminPage() {
           </Link>
         </div>
       )}
+
+      {/* Charts Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+        {/* Users by Type */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-[#1A1A2E] text-lg">Usuários por Tipo</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart
+                data={[
+                  { name: 'Clientes', valor: stats.clientes },
+                  { name: 'Donos', valor: stats.donos },
+                  { name: 'Pendentes', valor: stats.pendentes },
+                ]}
+                margin={{ top: 10, right: 10, left: 10, bottom: 10 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <XAxis dataKey="name" tick={{ fontSize: 13, fill: '#6b7280' }} />
+                <YAxis allowDecimals={false} tick={{ fontSize: 13, fill: '#6b7280' }} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#1A1A2E',
+                    border: 'none',
+                    borderRadius: '8px',
+                    color: '#fff',
+                    fontSize: '13px',
+                  }}
+                  cursor={{ fill: '#f3f4f6' }}
+                />
+                <Bar dataKey="valor" radius={[8, 8, 0, 0]} maxBarSize={80}>
+                  <Cell fill="#FF6B00" />
+                  <Cell fill="#1A1A2E" />
+                  <Cell fill="#f59e0b" />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Orders by Status */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-[#1A1A2E] text-lg">Ordens por Status</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {stats.ordens === 0 ? (
+              <div className="flex items-center justify-center h-[280px] text-gray-400">
+                Nenhuma ordem registrada
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart
+                  data={[
+                    { name: 'Total', valor: stats.ordens },
+                    { name: 'Agendada', valor: stats.ordensAgendado },
+                    { name: 'Finalizada', valor: stats.ordensFinalizado },
+                  ]}
+                  margin={{ top: 10, right: 10, left: 10, bottom: 10 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis dataKey="name" tick={{ fontSize: 13, fill: '#6b7280' }} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 13, fill: '#6b7280' }} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#1A1A2E',
+                      border: 'none',
+                      borderRadius: '8px',
+                      color: '#fff',
+                      fontSize: '13px',
+                    }}
+                    cursor={{ fill: '#f3f4f6' }}
+                  />
+                  <Bar dataKey="valor" radius={[8, 8, 0, 0]} maxBarSize={80}>
+                    <Cell fill="#FF6B00" />
+                    <Cell fill="#f59e0b" />
+                    <Cell fill="#22c55e" />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

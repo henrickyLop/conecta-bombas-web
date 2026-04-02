@@ -179,9 +179,9 @@ export default function AdminUsuariosPage() {
                             {selectedUser.tipo === 'dono_bomba' ? s.nome_cliente : s.nome_dono_bomba}
                           </p>
                           <Badge className={
-                            s.status === 'aceita' ? 'bg-green-100 text-green-700' :
-                            s.status === 'recusada' ? 'bg-red-100 text-red-700' :
-                            'bg-amber-100 text-amber-700'
+                            s.status === 'finalizado' ? 'bg-green-100 text-green-700' :
+                            s.status === 'cancelado' ? 'bg-red-100 text-red-700' :
+                            'bg-blue-100 text-blue-700'
                           }>{s.status}</Badge>
                         </div>
                         <p className="text-gray-500 text-xs">{s.volume}m³ · {s.data_servico} às {s.hora_servico}</p>
@@ -199,7 +199,7 @@ export default function AdminUsuariosPage() {
                       <div key={o.id} className="bg-orange-50 rounded-lg p-3 text-sm border border-orange-100">
                         <div className="flex items-center justify-between">
                           <p className="font-medium text-[#1A1A2E]">Ordem #{o.numero_ordem}</p>
-                          <Badge className={o.status === 'confirmada' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}>
+                          <Badge className={o.status === 'finalizado' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}>
                             {o.status}
                           </Badge>
                         </div>

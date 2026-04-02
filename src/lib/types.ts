@@ -20,6 +20,8 @@ export type Bomba = {
   tipo: string;
   capacidade: '500' | '1000' | '2000';
   status: 'aprovado' | 'pendente' | 'rejeitado';
+  cidades_atendidas: string[];
+  telefone_dono: string;
   criado_em: string;
 };
 
@@ -36,7 +38,7 @@ export type Solicitacao = {
   data_servico: string;
   hora_servico: string;
   observacoes: string;
-  status: 'pendente' | 'aceita' | 'recusada';
+  status: 'agendado' | 'finalizado' | 'cancelado';
   criado_em: string;
 };
 
@@ -53,7 +55,7 @@ export type Ordem = {
   volume: number;
   data_servico: string;
   hora_servico: string;
-  status: 'confirmada' | 'pendente';
+  status: 'agendado' | 'finalizado';
   criado_em: string;
 };
 

@@ -11,8 +11,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import { Loader2, Check, X, Clock, ClipboardList, Calendar, User, Phone } from 'lucide-react';
+import { Loader2, Check, X, Clock, ClipboardList, Calendar, User, Phone, MessageSquare } from 'lucide-react';
 import type { Solicitacao, Ordem } from '@/lib/types';
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
+} from 'recharts';
 
 export default function DonoDashboardPage() {
   const { usuario, loading: authLoading } = useAuth();
@@ -21,6 +24,11 @@ export default function DonoDashboardPage() {
   const [totalHistorico, setTotalHistorico] = useState(0);
   const [totalOrdens, setTotalOrdens] = useState(0);
   const [loading, setLoading] = useState(true);
+  // Chart states
+  const [agendadoCount, setAgendadoCount] = useState(0);
+  const [finalizadoCount, setFinalizadoCount] = useState(0);
+  const [canceladoCount, setCanceladoCount] = useState(0);
+  const [allSols, setAllSols] = useState<Solicitacao[]>([]);
   const [selected, setSelected] = useState<Solicitacao | null>(null);
   const [observacoes, setObservacoes] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
@@ -37,14 +45,21 @@ export default function DonoDashboardPage() {
   async function loadData() {
     setLoading(true);
     try {
-      const [pendRes, histRes, ordRes] = await Promise.all([
-        supabase.from('solicitacoes').select('*').eq('uid_dono_bomba', usuario!.id).eq('status', 'pendente').order('criado_em', { ascending: false }),
-        supabase.from('solicitacoes').select('id').eq('uid_dono_bomba', usuario!.id).in('status', ['aceita', 'recusada']),
+      const [pendRes, histRes, ordRes, allSolsRes] = await Promise.all([
+        supabase.from('solicitacoes').select('*').eq('uid_dono_bomba', usuario!.id).eq('status', 'agendado').order('criado_em', { ascending: false }),
+        supabase.from('solicitacoes').select('id').eq('uid_dono_bomba', usuario!.id).in('status', ['agendado', 'finalizado']),
         supabase.from('ordens').select('id').eq('uid_dono_bomba', usuario!.id),
+        supabase.from('solicitacoes').select('*').eq('uid_dono_bomba', usuario!.id).order('criado_em', { ascending: false }),
       ]);
       setPendentes((pendRes.data as Solicitacao[]) || []);
       setTotalHistorico(histRes.data?.length || 0);
       setTotalOrdens(ordRes.data?.length || 0);
+      // Chart data
+      const all = (allSolsRes.data as Solicitacao[]) || [];
+      setAllSols(all);
+      setAgendadoCount(all.filter(s => s.status === 'agendado').length);
+      setFinalizadoCount(all.filter(s => s.status === 'finalizado').length);
+      setCanceladoCount(all.filter(s => s.status === 'cancelado').length);
     } catch (e) {
       console.error(e);
     } finally {
@@ -52,69 +67,70 @@ export default function DonoDashboardPage() {
     }
   }
 
-  async function handleAceitar(solicitacao: Solicitacao) {
+  async function handleAgendar(solicitacao: Solicitacao) {
     setActionLoading(true);
     try {
-      // 1. Update solicitacao
-      const { error: solError } = await supabase
+      const { error } = await supabase
         .from('solicitacoes')
-        .update({ status: 'aceita' })
+        .update({ status: 'agendado' })
         .eq('id', solicitacao.id);
-      if (solError) throw solError;
+      if (error) throw error;
 
-      // 2. Create ordem
-      const { data: maxResult } = await supabase
-        .from('ordens')
-        .select('numero_ordem')
-        .order('numero_ordem', { ascending: false })
-        .limit(1);
-      const nextNum = (maxResult?.[0]?.numero_ordem ?? 0) + 1;
-
-      const { error: ordError } = await supabase.from('ordens').insert({
-        numero_ordem: nextNum,
-        uid_cliente: solicitacao.uid_cliente,
-        nome_cliente: solicitacao.nome_cliente,
-        telefone_cliente: solicitacao.telefone_cliente,
-        uid_dono_bomba: solicitacao.uid_dono_bomba,
-        nome_dono_bomba: solicitacao.nome_dono_bomba,
-        telefone_dono: usuario?.telefone || '',
-        capacidade: solicitacao.capacidade,
-        volume: solicitacao.volume,
-        data_servico: solicitacao.data_servico,
-        hora_servico: solicitacao.hora_servico,
-        status: 'pendente',
-      });
-      if (ordError) throw ordError;
-
-      toast.success('Solicitação aceita! Ordem gerada.');
+      toast.success('Solicitação agendada!');
       setPendentes(prev => prev.filter(s => s.id !== solicitacao.id));
       setSelected(null);
       setObservacoes('');
       loadData();
     } catch (e: any) {
-      toast.error(e.message || 'Erro ao aceitar');
+      toast.error(e.message || 'Erro ao agendar');
     } finally {
       setActionLoading(false);
     }
   }
 
-  async function handleRecusar(solicitacao: Solicitacao) {
+  async function handleCancelar(solicitacao: Solicitacao) {
     setActionLoading(true);
     try {
       const { error } = await supabase
         .from('solicitacoes')
-        .update({ status: 'recusada' })
+        .update({ status: 'cancelado' })
         .eq('id', solicitacao.id);
       if (error) throw error;
-      toast.success('Solicitação recusada');
+      toast.success('Solicitação cancelada');
       setPendentes(prev => prev.filter(s => s.id !== solicitacao.id));
       setSelected(null);
       setObservacoes('');
     } catch (e: any) {
-      toast.error(e.message || 'Erro ao recusar');
+      toast.error(e.message || 'Erro ao cancelar');
     } finally {
       setActionLoading(false);
     }
+  }
+
+  async function handleFinalizar(solicitacao: Solicitacao) {
+    setActionLoading(true);
+    try {
+      const { error } = await supabase
+        .from('solicitacoes')
+        .update({ status: 'finalizado' })
+        .eq('id', solicitacao.id);
+      if (error) throw error;
+      toast.success('Serviço finalizado!');
+      setPendentes(prev => prev.filter(s => s.id !== solicitacao.id));
+      setSelected(null);
+      setObservacoes('');
+      loadData();
+    } catch (e: any) {
+      toast.error(e.message || 'Erro ao finalizar');
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  function formatPhone(phone: string) {
+    if (!phone) return null;
+    const d = phone.replace(/\D/g, '');
+    return d.length === 11 ? `55${d}` : d.length === 10 ? `55${d}0` : phone;
   }
 
   if (authLoading || !usuario) {
@@ -148,6 +164,95 @@ export default function DonoDashboardPage() {
         </Card>
       </div>
 
+      {/* Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 my-6">
+        {/* Status Distribution */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-[#1A1A2E] text-lg">Solicitações por Status</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {allSols.length === 0 ? (
+              <div className="flex items-center justify-center h-[280px] text-gray-400">
+                Sem dados ainda
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart
+                  data={[
+                    { name: 'Agendado', valor: agendadoCount },
+                    { name: 'Finalizado', valor: finalizadoCount },
+                    { name: 'Cancelado', valor: canceladoCount },
+                  ]}
+                  margin={{ top: 10, right: 10, left: 10, bottom: 10 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis dataKey="name" tick={{ fontSize: 13, fill: '#6b7280' }} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 13, fill: '#6b7280' }} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#1A1A2E',
+                      border: 'none',
+                      borderRadius: '8px',
+                      color: '#fff',
+                      fontSize: '13px',
+                    }}
+                    cursor={{ fill: '#f3f4f6' }}
+                  />
+                  <Bar dataKey="valor" radius={[8, 8, 0, 0]} maxBarSize={80}>
+                    <Cell fill="#FF6B00" />
+                    <Cell fill="#22c55e" />
+                    <Cell fill="#ef4444" />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Volume by Service */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-[#1A1A2E] text-lg">Volume por Solicitação</CardTitle>
+            <p className="text-sm text-gray-500">Últimas solicitações (m³)</p>
+          </CardHeader>
+          <CardContent>
+            {allSols.length === 0 ? (
+              <div className="flex items-center justify-center h-[280px] text-gray-400">
+                Sem dados
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart
+                  data={allSols.slice(0, 10).reverse().map((s, i) => ({
+                    name: `#${i + 1}`,
+                    volume: s.volume,
+                    status: s.status === 'finalizado' ? 'Finalizado' : s.status === 'cancelado' ? 'Cancelado' : 'Agendado',
+                  }))}
+                  margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis tick={{ fontSize: 12, fill: '#6b7280' }} />
+                  <YAxis tick={{ fontSize: 12, fill: '#6b7280' }} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#1A1A2E',
+                      border: 'none',
+                      borderRadius: '8px',
+                      color: '#fff',
+                      fontSize: '13px',
+                    }}
+                    formatter={(value: any) => [value, '']}
+                    cursor={{ fill: '#f3f4f6' }}
+                  />
+                  <Bar dataKey="volume" radius={[6, 6, 0, 0]} maxBarSize={60} fill="#FF6B00" />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Pendentes */}
       {loading ? (
         <div className="space-y-3">
@@ -157,7 +262,7 @@ export default function DonoDashboardPage() {
         <Card>
           <CardContent className="p-12 text-center">
             <Clock size={48} className="text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-[#1A1A2E]">Nenhuma solicitação pendente</h3>
+            <h3 className="text-lg font-semibold text-[#1A1A2E]">Nenhuma solicitação agendada</h3>
             <p className="text-gray-500 mt-1">Novas solicitações aparecerão aqui</p>
           </CardContent>
         </Card>
@@ -184,18 +289,18 @@ export default function DonoDashboardPage() {
                     <Button
                       size="sm"
                       className="bg-green-600 hover:bg-green-700 text-white"
-                      onClick={e => { e.stopPropagation(); handleAceitar(s); }}
+                      onClick={e => { e.stopPropagation(); handleAgendar(s); }}
                       disabled={actionLoading}
                     >
-                      {actionLoading ? <Loader2 className="animate-spin" size={16} /> : <><Check size={14} className="mr-1" /> Aceitar</>}
+                      {actionLoading ? <Loader2 className="animate-spin" size={16} /> : <><Check size={14} className="mr-1" /> Agendar</>}
                     </Button>
                     <Button
                       size="sm"
                       variant="destructive"
-                      onClick={e => { e.stopPropagation(); handleRecusar(s); }}
+                      onClick={e => { e.stopPropagation(); handleCancelar(s); }}
                       disabled={actionLoading}
                     >
-                      <X size={14} className="mr-1" /> Recusar
+                      <X size={14} className="mr-1" /> Cancelar
                     </Button>
                   </div>
                 </div>
@@ -242,21 +347,37 @@ export default function DonoDashboardPage() {
 
               <div className="flex gap-2 pt-2">
                 <Button
-                  onClick={() => handleAceitar(selected)}
+                  onClick={() => handleAgendar(selected)}
                   disabled={actionLoading}
                   className="flex-1 bg-green-600 hover:bg-green-700 text-white"
                 >
-                  {actionLoading ? <Loader2 className="animate-spin" size={18} /> : 'Aceitar'}
+                  {actionLoading ? <Loader2 className="animate-spin" size={18} /> : <><Check size={16} className="mr-1" /> Agendar</>}
                 </Button>
                 <Button
-                  onClick={() => handleRecusar(selected)}
+                  onClick={() => handleFinalizar(selected)}
+                  disabled={actionLoading}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  {actionLoading ? <Loader2 className="animate-spin" size={18} /> : <><ClipboardList size={16} className="mr-1" /> Finalizar</>}
+                </Button>
+                <Button
+                  onClick={() => handleCancelar(selected)}
                   disabled={actionLoading}
                   variant="destructive"
                   className="flex-1"
                 >
-                  Recusar
+                  Cancelar
                 </Button>
               </div>
+
+              {selected.telefone_cliente && (
+                <a href={`https://wa.me/${formatPhone(selected.telefone_cliente)}`} target="_blank" rel="noopener noreferrer">
+                  <Button variant="outline" className="w-full bg-green-50 hover:bg-green-100 text-green-700 border-green-200">
+                    <MessageSquare size={18} className="mr-2" />
+                    WhatsApp do Cliente
+                  </Button>
+                </a>
+              )}
             </div>
           )}
         </DialogContent>

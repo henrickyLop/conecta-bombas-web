@@ -41,11 +41,11 @@ export default function ClienteSolicitacoesPage() {
 
   function statusBadge(status: string) {
     const map: Record<string, { text: string; cls: string; icon: string }> = {
-      pendente: { text: 'Pendente', cls: 'bg-amber-100 text-amber-700', icon: '⏳' },
-      aceita: { text: 'Aceita', cls: 'bg-green-100 text-green-700', icon: '✅' },
-      recusada: { text: 'Recusada', cls: 'bg-red-100 text-red-700', icon: '❌' },
+      agendado: { text: 'Agendada', cls: 'bg-blue-100 text-blue-700', icon: '📅' },
+      finalizado: { text: 'Finalizada', cls: 'bg-green-100 text-green-700', icon: '✅' },
+      cancelado: { text: 'Cancelada', cls: 'bg-red-100 text-red-700', icon: '❌' },
     };
-    const s = map[status] || map.pendente;
+    const s = map[status] || map.agendado;
     return <Badge className={`${s.cls} px-3 py-1`}>{s.icon} {s.text}</Badge>;
   }
 
@@ -160,7 +160,7 @@ export default function ClienteSolicitacoesPage() {
                 </div>
               )}
 
-              {selected.status === 'aceita' && (
+              {selected.status === 'agendado' && (
                 <a
                   href={whatsappLink(selected.telefone_cliente || '')}
                   target="_blank"

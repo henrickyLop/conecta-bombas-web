@@ -27,6 +27,24 @@ import { toast } from 'sonner';
 import { Loader2, Truck, MapPin, Settings, Search, CheckCircle } from 'lucide-react';
 import { ESTADOS_BR } from '@/lib/types';
 import type { Bomba } from '@/lib/types';
+import { getCityCoords, averageCenter } from '@/lib/city-coords';
+import dynamic from 'next/dynamic';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+
+// Dynamic imports for Leaflet (SSR is not compatible with leaflet)
+const MapContainer = dynamic(() => import('react-leaflet').then(m => m.MapContainer), { ssr: false });
+const TileLayer = dynamic(() => import('react-leaflet').then(m => m.TileLayer), { ssr: false });
+const Marker = dynamic(() => import('react-leaflet').then(m => m.Marker), { ssr: false });
+const Popup = dynamic(() => import('react-leaflet').then(m => m.Popup), { ssr: false });
+
+// Fix Leaflet default icon issue with Next.js bundler
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+});
 
 export default function ClienteBuscarPage() {
   const { usuario } = useAuth();
@@ -97,7 +115,7 @@ export default function ClienteBuscarPage() {
         data_servico: dataServico,
         hora_servico: horaServico,
         observacoes,
-        status: 'pendente',
+        status: 'agendado',
       });
       if (error) throw error;
       toast.success('Solicitação enviada! Aguarde resposta do dono.');
@@ -113,6 +131,12 @@ export default function ClienteBuscarPage() {
       setSubmitting(false);
     }
   }
+
+  // Compute map center from results
+  const mapCoords = bombas
+    .map(b => getCityCoords(b.cidade, b.estado))
+    .filter((c): c is { lat: number; lng: number } => c != null);
+  const mapCenter: [number, number] = averageCenter(mapCoords) ?? [-22.90, -47.05 ]; // default: Campinas
 
   return (
     <div>
@@ -183,38 +207,90 @@ export default function ClienteBuscarPage() {
       )}
 
       {!loading && searched && bombas.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {bombas.map(b => (
-            <Card key={b.id} className="hover:shadow-lg transition-shadow">
-              <CardContent className="p-5">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="w-10 h-10 rounded-lg bg-[#FF6B00]/10 flex items-center justify-center">
-                    <Truck size={18} className="text-[#FF6B00]" />
+        <>
+          {/* Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            {bombas.map(b => (
+              <Card key={b.id} className="hover:shadow-lg transition-shadow">
+                <CardContent className="p-5">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="w-10 h-10 rounded-lg bg-[#FF6B00]/10 flex items-center justify-center">
+                      <Truck size={18} className="text-[#FF6B00]" />
+                    </div>
+                    <Badge className="bg-green-100 text-green-700">Disponível</Badge>
                   </div>
-                  <Badge className="bg-green-100 text-green-700">Disponível</Badge>
-                </div>
-                <h3 className="font-semibold text-[#1A1A2E]">{b.nome_dono}</h3>
-                <div className="space-y-2 mt-3 text-sm text-gray-600">
-                  <div className="flex items-center gap-2">
-                    <MapPin size={14} />
-                    <span>{b.cidade} - {b.estado}</span>
+                  <h3 className="font-semibold text-[#1A1A2E]">{b.nome_dono}</h3>
+                  <div className="space-y-2 mt-3 text-sm text-gray-600">
+                    <div className="flex items-center gap-2">
+                      <MapPin size={14} />
+                      <span>{b.cidade} - {b.estado}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Settings size={14} />
+                      <span>{b.tipo} · {b.capacidade} L/h</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Settings size={14} />
-                    <span>{b.tipo} · {b.capacidade} L/h</span>
-                  </div>
-                </div>
-                <Button
-                  onClick={() => openSolicitacao(b)}
-                  className="w-full mt-4 bg-[#FF6B00] hover:bg-[#E55E00] text-white"
+                  <Button
+                    onClick={() => openSolicitacao(b)}
+                    className="w-full mt-4 bg-[#FF6B00] hover:bg-[#E55E00] text-white"
+                  >
+                    <CheckCircle size={16} className="mr-2" />
+                    Solicitar
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Map */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-[#1A1A2E] flex items-center gap-2">
+                <MapPin size={20} className="text-[#FF6B00]" />
+                Bombas no Mapa
+              </CardTitle>
+              <CardDescription>{bombas.length} bomba{bombas.length !== 1 ? 's' : ''} encontrada{bombas.length !== 1 ? 's' : ''}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div
+                className="rounded-xl overflow-hidden border border-gray-200"
+                style={{ height: 350 }}
+              >
+                <MapContainer
+                  center={mapCenter}
+                  zoom={8}
+                  scrollWheelZoom={true}
+                  style={{ height: '100%', width: '100%' }}
+                  whenReady={() => {
+                    // Dispatch resize event so Leaflet renders correctly inside container
+                    setTimeout(() => window.dispatchEvent(new Event('resize')), 100);
+                  }}
                 >
-                  <CheckCircle size={16} className="mr-2" />
-                  Solicitar
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                  <TileLayer
+                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  />
+                  {bombas.map(b => {
+                    const coords = getCityCoords(b.cidade, b.estado);
+                    if (!coords) return null;
+                    return (
+                      <Marker key={b.id} position={[coords.lat, coords.lng]}>
+                        <Popup>
+                          <div className="text-sm">
+                            <p className="font-semibold text-[#FF6B00]">{b.nome_dono}</p>
+                            <p className="text-gray-600">{b.cidade} - {b.estado}</p>
+                            <p><span className="font-medium">Tipo:</span> {b.tipo}</p>
+                            <p><span className="font-medium">Capacidade:</span> {b.capacidade} L/h</p>
+                          </div>
+                        </Popup>
+                      </Marker>
+                    );
+                  })}
+                </MapContainer>
+              </div>
+            </CardContent>
+          </Card>
+        </>
       )}
 
       {!searched && !loading && (

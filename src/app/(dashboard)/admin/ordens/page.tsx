@@ -64,7 +64,7 @@ export default function AdminOrdensPage() {
                       <div>
                         <h3 className="font-semibold text-[#1A1A2E]">Ordem #{o.numero_ordem}</h3>
                         <Badge className={
-                          o.status === 'confirmada' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+                          o.status === 'finalizado' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
                         }>{o.status}</Badge>
                       </div>
                     </div>

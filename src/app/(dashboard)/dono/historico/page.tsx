@@ -28,7 +28,7 @@ export default function DonoHistoricoPage() {
         .from('solicitacoes')
         .select('*')
         .eq('uid_dono_bomba', usuario!.id)
-        .in('status', ['aceita', 'recusada'])
+        .eq('status', 'finalizado')
         .order('criado_em', { ascending: false });
       if (error) throw error;
       setHistorico(data as Solicitacao[] || []);
@@ -71,9 +71,9 @@ export default function DonoHistoricoPage() {
                 <div className="flex items-center justify-between flex-wrap gap-3">
                   <div className="flex items-center gap-3">
                     <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                      s.status === 'aceita' ? 'bg-green-100' : 'bg-red-100'
+                      s.status === 'finalizado' ? 'bg-green-100' : 'bg-red-100'
                     }`}>
-                      <ClipboardList size={18} className={s.status === 'aceita' ? 'text-green-600' : 'text-red-600'} />
+                      <ClipboardList size={18} className={s.status === 'finalizado' ? 'text-green-600' : 'text-red-600'} />
                     </div>
                     <div>
                       <p className="font-semibold text-[#1A1A2E]">{s.nome_cliente}</p>
@@ -86,9 +86,9 @@ export default function DonoHistoricoPage() {
                       <p>{s.hora_servico}</p>
                     </div>
                     <Badge className={
-                      s.status === 'aceita' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                      s.status === 'finalizado' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                     }>
-                      {s.status === 'aceita' ? 'Aceita' : 'Recusada'}
+                      {s.status === 'finalizado' ? 'Finalizada' : 'Cancelada'}
                     </Badge>
                   </div>
                 </div>
@@ -131,7 +131,7 @@ export default function DonoHistoricoPage() {
                 </div>
               )}
 
-              {selected.status === 'aceita' && selected.telefone_cliente && (
+              {selected.status === 'agendado' && selected.telefone_cliente && (
                 <a href={`https://wa.me/${formatPhone(selected.telefone_cliente)}`} target="_blank" rel="noopener noreferrer">
                   <button className="w-full py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-medium flex items-center justify-center gap-2">
                     <MessageSquare size={18} />

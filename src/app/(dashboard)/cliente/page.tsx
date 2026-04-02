@@ -8,13 +8,18 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, Truck, ClipboardList, Search, Check, X, Clock } from 'lucide-react';
 import { supabase } from '@/lib/supabase-client';
 import type { Solicitacao } from '@/lib/types';
+import {
+  PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  AreaChart, Area,
+} from 'recharts';
 
 export default function ClientePage() {
   const { usuario, loading } = useAuth();
   const router = useRouter();
-  const [stats, setStats] = useState({ total: 0, pendentes: 0, aceitas: 0, recusadas: 0 });
-  const [loadingStats, setLoadingStats] = useState(true);
+  const [stats, setStats] = useState({ total: 0, agendados: 0, finalizados: 0, cancelados: 0 });
   const [recentes, setRecentes] = useState<Solicitacao[]>([]);
+  const [loadingStats, setLoadingStats] = useState(true);
 
   useEffect(() => {
     if (usuario && usuario.tipo !== 'cliente') {
@@ -34,9 +39,9 @@ export default function ClientePage() {
         const sols = data as Solicitacao[] || [];
         setStats({
           total: sols.length,
-          pendentes: sols.filter(s => s.status === 'pendente').length,
-          aceitas: sols.filter(s => s.status === 'aceita').length,
-          recusadas: sols.filter(s => s.status === 'recusada').length,
+          agendados: sols.filter(s => s.status === 'agendado').length,
+          finalizados: sols.filter(s => s.status === 'finalizado').length,
+          cancelados: sols.filter(s => s.status === 'cancelado').length,
         });
         setRecentes(sols.slice(0, 5));
       } catch (e) {
@@ -56,6 +61,12 @@ export default function ClientePage() {
     );
   }
 
+  const pieData = [
+    { name: 'Agendados', value: stats.agendados, color: '#FF6B00' },
+    { name: 'Finalizados', value: stats.finalizados, color: '#22c55e' },
+    { name: 'Cancelados', value: stats.cancelados, color: '#ef4444' },
+  ];
+
   return (
     <div>
       <div className="mb-8">
@@ -66,35 +77,74 @@ export default function ClientePage() {
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <Card className="border-l-4 border-l-blue-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">Total</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-[#1A1A2E]">{stats.total}</div>
-          </CardContent>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-gray-500">Total</CardTitle></CardHeader>
+          <CardContent><div className="text-3xl font-bold text-[#1A1A2E]">{stats.total}</div></CardContent>
         </Card>
         <Card className="border-l-4 border-l-amber-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">Pendentes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-[#1A1A2E]">{stats.pendentes}</div>
-          </CardContent>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-gray-500">Agendados</CardTitle></CardHeader>
+          <CardContent><div className="text-3xl font-bold text-[#1A1A2E]">{stats.agendados}</div></CardContent>
         </Card>
         <Card className="border-l-4 border-l-green-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">Aceitas</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-[#1A1A2E]">{stats.aceitas}</div>
-          </CardContent>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-gray-500">Finalizados</CardTitle></CardHeader>
+          <CardContent><div className="text-3xl font-bold text-[#1A1A2E]">{stats.finalizados}</div></CardContent>
         </Card>
         <Card className="border-l-4 border-l-red-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">Recusadas</CardTitle>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-gray-500">Cancelados</CardTitle></CardHeader>
+          <CardContent><div className="text-3xl font-bold text-[#1A1A2E]">{stats.cancelados}</div></CardContent>
+        </Card>
+      </div>
+
+      {/* Charts Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-[#1A1A2E]">Status das Solicitações</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-[#1A1A2E]">{stats.recusadas}</div>
+            <ResponsiveContainer width="100%" height={260}>
+              <PieChart>
+                <Pie
+                  data={pieData}
+                  dataKey="value"
+                  nameKey="name"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={90}
+                  label={(entry: any) => entry.value > 0 ? `${entry.name}: ${entry.value}` : ''}
+                  stroke="#fff"
+                  strokeWidth={2}
+                >
+                  <Cell fill="#FF6B00" />
+                  <Cell fill="#22c55e" />
+                  <Cell fill="#ef4444" />
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-[#1A1A2E]">Volume Total (m³)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={260}>
+              <AreaChart data={[{ name: 'm³', total: recentes.reduce((sum, s) => sum + s.volume, 0) }]}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Area
+                  type="monotone"
+                  dataKey="total"
+                  stroke="#FF6B00"
+                  fill="#FF6B00"
+                  fillOpacity={0.2}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
           </CardContent>
         </Card>
       </div>
@@ -154,11 +204,11 @@ export default function ClientePage() {
                     <p className="text-sm text-gray-500">{s.volume}m³ · {s.data_servico} às {s.hora_servico}</p>
                   </div>
                   <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                    s.status === 'aceita' ? 'bg-green-100 text-green-700' :
-                    s.status === 'recusada' ? 'bg-red-100 text-red-700' :
-                    'bg-amber-100 text-amber-700'
+                    s.status === 'agendado' ? 'bg-amber-100 text-amber-700' :
+                    s.status === 'cancelado' ? 'bg-red-100 text-red-700' :
+                    'bg-green-100 text-green-700'
                   }`}>
-                    {s.status === 'aceita' ? 'Aceita' : s.status === 'recusada' ? 'Recusada' : 'Pendente'}
+                    {s.status === 'agendado' ? 'Agendada' : s.status === 'cancelado' ? 'Cancelada' : 'Finalizada'}
                   </span>
                 </div>
               ))}
