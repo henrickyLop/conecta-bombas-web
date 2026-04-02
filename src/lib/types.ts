@@ -39,7 +39,7 @@ export type Solicitacao = {
   data_servico: string;
   hora_servico: string;
   observacoes: string;
-  status: 'agendado' | 'finalizado' | 'cancelado';
+  status: 'agendado' | 'finalizado' | 'cancelado' | 'aceita' | 'pendente' | 'recusada';
   criado_em: string;
 };
 

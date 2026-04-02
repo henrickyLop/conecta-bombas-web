@@ -44,6 +44,10 @@ export default function ClienteSolicitacoesPage() {
       agendado: { text: 'Agendada', cls: 'bg-blue-100 text-blue-700', icon: '📅' },
       finalizado: { text: 'Finalizada', cls: 'bg-green-100 text-green-700', icon: '✅' },
       cancelado: { text: 'Cancelada', cls: 'bg-red-100 text-red-700', icon: '❌' },
+      // Compatibilidade com status antigos
+      pendente: { text: 'Agendada', cls: 'bg-blue-100 text-blue-700', icon: '📅' },
+      aceita: { text: 'Agendada', cls: 'bg-blue-100 text-blue-700', icon: '📅' },
+      recusada: { text: 'Cancelada', cls: 'bg-red-100 text-red-700', icon: '❌' },
     };
     const s = map[status] || map.agendado;
     return <Badge className={`${s.cls} px-3 py-1`}>{s.icon} {s.text}</Badge>;
@@ -117,7 +121,7 @@ export default function ClienteSolicitacoesPage() {
           <DialogHeader>
             <DialogTitle className="text-[#1A1A2E]">Detalhes da Solicitação</DialogTitle>
             <DialogDescription>
-              {selected && `${selected.nome_dono_bomba} — ${selected.status}`}
+              {selected && `${selected.nome_dono_bomba}`}
             </DialogDescription>
           </DialogHeader>
           {selected && (
@@ -149,7 +153,7 @@ export default function ClienteSolicitacoesPage() {
                 </div>
                 <div>
                   <span className="text-gray-500">Telefone:</span>
-                  <p className="font-medium text-[#1A1A2E]">{selected.telefone_cliente || '—'}</p>
+                  <p className="font-medium text-[#1A1A2E]">{selected.telefone_dono || selected.telefone_cliente || '—'}</p>
                 </div>
               </div>
 
@@ -160,17 +164,23 @@ export default function ClienteSolicitacoesPage() {
                 </div>
               )}
 
-              {selected.status === 'agendado' && selected.telefone_dono && (
-                <a
-                  href={whatsappLink(selected.telefone_dono)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <Button className="w-full bg-green-600 hover:bg-green-700 text-white">
-                    <MessageSquare size={18} className="mr-2" />
-                    Conversar com {selected.nome_dono_bomba}
-                  </Button>
-                </a>
+              {(selected.status === 'agendado' || selected.status === 'aceita' || selected.status === 'pendente') && (
+                selected.telefone_dono ? (
+                  <a
+                    href={whatsappLink(selected.telefone_dono)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Button className="w-full bg-green-600 hover:bg-green-700 text-white">
+                      <MessageSquare size={18} className="mr-2" />
+                      Conversar com {selected.nome_dono_bomba}
+                    </Button>
+                  </a>
+                ) : (
+                  <div className="text-center text-sm text-amber-600 py-2 bg-amber-50 rounded-lg">
+                    ⚠️ Telefone do dono não cadastrado — contate o admin
+                  </div>
+                )
               )}
             </div>
           )}
