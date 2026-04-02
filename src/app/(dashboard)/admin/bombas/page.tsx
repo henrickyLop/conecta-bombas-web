@@ -79,7 +79,7 @@ export default function AdminBombasPage() {
                   </div>
                   <div className="flex items-center gap-2 text-gray-600">
                     <Settings size={14} />
-                    <span>{b.tipo} · {b.capacidade} L/h</span>
+                    <span>{b.tipo} · {b.capacidade}</span>
                   </div>
                 </div>
               </CardContent>

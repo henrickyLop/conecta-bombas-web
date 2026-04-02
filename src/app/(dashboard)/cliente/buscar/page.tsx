@@ -122,7 +122,7 @@ export default function ClienteBuscarPage() {
         data_servico: dataServico,
         hora_servico: horaServico,
         observacoes,
-        status: 'agendado',
+        status: 'pendente',
       });
       if (error) throw error;
       toast.success('Solicitação enviada! Aguarde resposta do dono.');

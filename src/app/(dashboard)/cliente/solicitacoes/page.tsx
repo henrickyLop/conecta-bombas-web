@@ -45,7 +45,7 @@ export default function ClienteSolicitacoesPage() {
       finalizado: { text: 'Finalizada', cls: 'bg-green-100 text-green-700', icon: '✅' },
       cancelado: { text: 'Cancelada', cls: 'bg-red-100 text-red-700', icon: '❌' },
       // Compatibilidade com status antigos
-      pendente: { text: 'Agendada', cls: 'bg-blue-100 text-blue-700', icon: '📅' },
+      pendente: { text: 'Aguardando', cls: 'bg-amber-100 text-amber-700', icon: '⏳' },
       aceita: { text: 'Agendada', cls: 'bg-blue-100 text-blue-700', icon: '📅' },
       recusada: { text: 'Cancelada', cls: 'bg-red-100 text-red-700', icon: '❌' },
     };
@@ -98,7 +98,7 @@ export default function ClienteSolicitacoesPage() {
                     </div>
                     <div>
                       <p className="font-semibold text-[#1A1A2E]">{s.nome_dono_bomba}</p>
-                      <p className="text-sm text-gray-500">{s.volume}m³ · {s.capacidade} L/h</p>
+                      <p className="text-sm text-gray-500">{s.volume}m³ · Bomba {String(s.capacidade).replace(/[^0-9]/g, '')}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
@@ -141,7 +141,7 @@ export default function ClienteSolicitacoesPage() {
                 </div>
                 <div>
                   <span className="text-gray-500">Capacidade:</span>
-                  <p className="font-medium text-[#1A1A2E]">{selected.capacidade} L/h</p>
+                  <p className="font-medium text-[#1A1A2E]">Bomba {String(selected?.capacidade).replace(/[^0-9]/g, '')}</p>
                 </div>
                 <div>
                   <span className="text-gray-500">Data:</span>
@@ -157,11 +157,13 @@ export default function ClienteSolicitacoesPage() {
                 </div>
               </div>
 
-              {selected.observacoes && (
+              {selected.observacoes ? (
                 <div>
-                  <span className="text-gray-500 text-sm">Observações:</span>
+                  <span className="text-gray-500">Observações:</span>
                   <p className="text-[#1A1A2E] mt-1">{selected.observacoes}</p>
                 </div>
+              ) : (
+                <div className="text-gray-400 text-sm italic">Sem observações registradas</div>
               )}
 
               {(selected.status === 'agendado' || selected.status === 'aceita' || selected.status === 'pendente') && (

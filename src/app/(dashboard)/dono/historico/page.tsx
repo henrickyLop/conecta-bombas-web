@@ -77,7 +77,7 @@ export default function DonoHistoricoPage() {
                     </div>
                     <div>
                       <p className="font-semibold text-[#1A1A2E]">{s.nome_cliente}</p>
-                      <p className="text-sm text-gray-500">{s.volume}m³ · {s.capacidade} L/h</p>
+                      <p className="text-sm text-gray-500">{s.volume}m³ · Bomba {s.capacidade}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">

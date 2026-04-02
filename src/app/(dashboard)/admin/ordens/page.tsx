@@ -78,7 +78,7 @@ export default function AdminOrdensPage() {
                         <span className="text-[#1A1A2E]">{o.nome_dono_bomba || 'Não atribuído'}</span>
                       </div>
                       <div className="flex items-center gap-2 text-gray-600">
-                        <span className="font-medium text-[#1A1A2E]">{o.volume}m³ · {o.capacidade}L/h</span>
+                        <span className="font-medium text-[#1A1A2E]">{o.volume}m³ · {o.capacidade}</span>
                       </div>
                       <div className="flex items-center gap-2 text-gray-600">
                         <Calendar size={14} />
