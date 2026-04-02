@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase-client';
@@ -18,6 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, User, Truck } from 'lucide-react';
 import { toast } from 'sonner';
 import { ESTADOS_BR } from '@/lib/types';
+import { CIDADES_BRASIL, getCidadesPorEstado } from '@/lib/cidades-brasil';
 
 export default function CadastroPage() {
   const [loading, setLoading] = useState(false);
@@ -32,7 +33,12 @@ export default function CadastroPage() {
   // Dono bomba fields
   const [tipoBomba, setTipoBomba] = useState('');
   const [capacidadeBomba, setCapacidadeBomba] = useState('500');
+
   const router = useRouter();
+
+  const cidadesDoEstado = useMemo(() => {
+    return getCidadesPorEstado(estado);
+  }, [estado]);
 
   const handleCadastro = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -183,27 +189,14 @@ export default function CadastroPage() {
               />
             </div>
 
+            {/* Estado e Cidade lado a lado */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label htmlFor="cidade" className="text-[#1A1A2E]">
-                  Cidade
-                </Label>
-                <Input
-                  id="cidade"
-                  value={cidade}
-                  onChange={(e) => setCidade(e.target.value)}
-                  required
-                  className="mt-1.5 text-[#1A1A2E]"
-                />
-              </div>
-              <div>
-                <Label htmlFor="estado" className="text-[#1A1A2E]">
-                  Estado
-                </Label>
+                <Label htmlFor="estado" className="text-[#1A1A2E]">Estado</Label>
                 <select
                   id="estado"
                   value={estado}
-                  onChange={(e) => setEstado(e.target.value)}
+                  onChange={(e) => { setEstado(e.target.value); setCidade(''); }}
                   className="mt-1.5 w-full h-10 rounded-md border border-input bg-background px-3 text-[#1A1A2E] text-sm"
                   required
                 >
@@ -212,6 +205,35 @@ export default function CadastroPage() {
                     <option key={uf} value={uf}>{uf}</option>
                   ))}
                 </select>
+              </div>
+              <div>
+                <Label htmlFor="cidade" className="text-[#1A1A2E]">
+                  Cidade
+                </Label>
+                {estado && cidadesDoEstado.length > 0 ? (
+                  <select
+                    id="cidade"
+                    value={cidade}
+                    onChange={(e) => setCidade(e.target.value)}
+                    className="mt-1.5 w-full h-10 rounded-md border border-input bg-background px-3 text-[#1A1A2E] text-sm"
+                    required
+                  >
+                    <option value="" disabled hidden>Escolha a cidade</option>
+                    {cidadesDoEstado.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <Input
+                    id="cidade"
+                    value={cidade}
+                    onChange={(e) => setCidade(e.target.value)}
+                    required
+                    placeholder={estado ? 'Digite a cidade' : 'Selecione o estado primeiro'}
+                    disabled={!estado}
+                    className="mt-1.5 text-[#1A1A2E]"
+                  />
+                )}
               </div>
             </div>
 

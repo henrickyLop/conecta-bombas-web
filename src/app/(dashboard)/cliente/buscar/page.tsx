@@ -1,13 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/supabase-client';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-
 import {
   Dialog,
   DialogContent,
@@ -22,6 +21,7 @@ import { Loader2, Truck, MapPin, Settings, Search, CheckCircle } from 'lucide-re
 import { ESTADOS_BR } from '@/lib/types';
 import type { Bomba } from '@/lib/types';
 import { getCityCoords, averageCenter } from '@/lib/city-coords';
+import { CIDADES_BRASIL, getCidadesPorEstado } from '@/lib/cidades-brasil';
 import dynamic from 'next/dynamic';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -47,9 +47,9 @@ export default function ClienteBuscarPage() {
   const [searched, setSearched] = useState(false);
   const [selectedBomba, setSelectedBomba] = useState<Bomba | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  // Search
-  const [cidade, setCidade] = useState('');
+  // Search - estado primeiro
   const [estado, setEstado] = useState('');
+  const [cidade, setCidade] = useState('');
   // Request
   const [volume, setVolume] = useState('');
   const [dataServico, setDataServico] = useState('');
@@ -57,17 +57,30 @@ export default function ClienteBuscarPage() {
   const [observacoes, setObservacoes] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  // Cidades do estado selecionado
+  const cidadesDoEstado = useMemo(() => {
+    return getCidadesPorEstado(estado);
+  }, [estado]);
+
+  // Quando seleciona estado novo, limpa cidade
+  function handleEstadoChange(uf: string) {
+    setEstado(uf);
+    setCidade('');
+  }
+
   async function buscarBombas() {
     if (!cidade && !estado) {
-      toast.error('Preencha ao menos cidade ou estado');
+      toast.error('Preencha ao menos o estado');
       return;
     }
     setLoading(true);
     setSearched(false);
     try {
       let query = supabase.from('bombas').select('*').eq('status', 'aprovado');
-      if (cidade) query = query.ilike('cidade', `%${cidade}%`);
-      if (estado && estado !== 'todos') query = query.eq('estado', estado);
+      // Estado filtra primeiro
+      if (estado) query = query.eq('estado', estado);
+      // Cidade filtra depois
+      if (cidade) query = query.eq('cidade', cidade);
       const { data, error } = await query.order('criado_em', { ascending: false });
       if (error) throw error;
       setBombas(data as Bomba[] || []);
@@ -81,7 +94,6 @@ export default function ClienteBuscarPage() {
 
   function openSolicitacao(bomba: Bomba) {
     if (!usuario) return;
-    // Don't allow requesting from own pump
     if (bomba.uid_dono === usuario.id) {
       toast.error('Você não pode solicitar para sua própria bomba');
       return;
@@ -140,38 +152,62 @@ export default function ClienteBuscarPage() {
         <p className="text-gray-500 mt-1">Encontre bombas disponíveis na sua região</p>
       </div>
 
-      {/* Search */}
+      {/* Search - estado primeiro */}
       <Card className="mb-8">
         <CardHeader>
           <CardTitle className="text-[#1A1A2E]">Filtro de Busca</CardTitle>
-          <CardDescription>Informe a cidade e/ou estado desejado</CardDescription>
+          <CardDescription>Selecione o estado e a cidade</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col sm:flex-row gap-3 items-end">
-            <div className="flex-1 w-full">
-              <Label htmlFor="cidade" className="text-[#1A1A2E]">Cidade</Label>
-              <Input
-                id="cidade"
-                value={cidade}
-                onChange={e => setCidade(e.target.value)}
-                placeholder="Ex: Campinas"
-                className="mt-1 text-[#1A1A2E]"
-              />
-            </div>
-            <div className="w-full sm:w-32">
+            {/* Estado primeiro */}
+            <div className="w-full sm:w-28">
               <Label htmlFor="estado" className="text-[#1A1A2E]">Estado</Label>
               <select
                 id="estado"
-                value={estado || 'todos'}
-                onChange={(e) => setEstado(e.target.value === 'todos' ? '' : e.target.value)}
-                className="mt-1 w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-[#1A1A2E] text-sm"
+                value={estado}
+                onChange={(e) => handleEstadoChange(e.target.value)}
+                className="mt-1.5 w-full h-10 rounded-md border border-input bg-background px-3 text-[#1A1A2E] text-sm"
               >
-                <option value="todos">Todos</option>
+                <option value="" disabled hidden>UF</option>
                 {ESTADOS_BR.map((uf) => (
                   <option key={uf} value={uf}>{uf}</option>
                 ))}
               </select>
             </div>
+
+            {/* Cidade - autocomplete com datalist */}
+            <div className="flex-1 w-full">
+              <Label htmlFor="cidade" className="text-[#1A1A2E]">Cidade</Label>
+              {estado && cidadesDoEstado.length > 0 ? (
+                <Input
+                  id="cidade"
+                  list={`cidades-${estado}`}
+                  value={cidade}
+                  onChange={e => setCidade(e.target.value)}
+                  placeholder="Digite para buscar..."
+                  className="mt-1.5 text-[#1A1A2E]"
+                />
+              ) : (
+                <Input
+                  id="cidade"
+                  value={cidade}
+                  onChange={e => setCidade(e.target.value)}
+                  placeholder={estado ? 'Digite a cidade' : 'Selecione o estado primeiro'}
+                  disabled={!estado}
+                  className="mt-1.5 text-[#1A1A2E]"
+                />
+              )}
+              {/* Datalist com cidades do estado */}
+              {estado && cidadesDoEstado.length > 0 && (
+                <datalist id={`cidades-${estado}`}>
+                  {cidadesDoEstado.map((c) => (
+                    <option key={c} value={c} />
+                  ))}
+                </datalist>
+              )}
+            </div>
+
             <Button
               onClick={buscarBombas}
               disabled={loading}
@@ -257,7 +293,6 @@ export default function ClienteBuscarPage() {
                   scrollWheelZoom={true}
                   style={{ height: '100%', width: '100%' }}
                   whenReady={() => {
-                    // Dispatch resize event so Leaflet renders correctly inside container
                     setTimeout(() => window.dispatchEvent(new Event('resize')), 100);
                   }}
                 >
@@ -293,7 +328,7 @@ export default function ClienteBuscarPage() {
           <CardContent className="p-12 text-center">
             <Search size={48} className="text-gray-300 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-[#1A1A2E]">Busque por bombas</h3>
-            <p className="text-gray-500 mt-1">Preencha os campos acima e clique em Buscar</p>
+            <p className="text-gray-500 mt-1">Selecione o estado e a cidade</p>
           </CardContent>
         </Card>
       )}
