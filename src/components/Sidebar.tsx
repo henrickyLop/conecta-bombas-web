@@ -14,6 +14,9 @@ import {
   X,
   ChevronDown,
   Search,
+  Check,
+  CheckCircle,
+  Ban,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -31,7 +34,10 @@ const menuMap: Record<string, { icon: React.ReactNode; label: string; href: stri
     { icon: <ClipboardList size={20} />, label: 'Solicitações', href: '/cliente/solicitacoes' },
   ],
   dono: [
-    { icon: <LayoutDashboard size={20} />, label: 'Dashboard', href: '/dono' },
+    { icon: <LayoutDashboard size={20} />, label: 'Aguardando', href: '/dono#pendentes' },
+    { icon: <ClipboardList size={20} />, label: 'Agendadas', href: '/dono#agendadas' },
+    { icon: <CheckCircle size={20} />, label: 'Finalizadas', href: '/dono#finalizadas' },
+    { icon: <Ban size={20} />, label: 'Canceladas', href: '/dono#canceladas' },
     { icon: <ClipboardList size={20} />, label: 'Histórico', href: '/dono/historico' },
   ],
 };

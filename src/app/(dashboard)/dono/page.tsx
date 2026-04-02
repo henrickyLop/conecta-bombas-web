@@ -26,8 +26,21 @@ export default function DonoDashboardPage() {
   const router = useRouter();
   const [todas, setTodas] = useState<Solicitacao[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selected, setSelected] = useState<Solicitacao | null>(null);
+  const [activeTab, setActiveTab] = useState('pendentes');
   const [actionLoading, setActionLoading] = useState(false);
+  const [selected, setSelected] = useState<Solicitacao | null>(null);
+
+  // Read URL hash for tab
+  useEffect(() => {
+    const hash = window.location.hash.replace('#', '');
+    if (['pendentes', 'agendadas', 'finalizadas', 'canceladas'].includes(hash)) setActiveTab(hash);
+    function handleHash() {
+      const h = window.location.hash.replace('#', '');
+      if (['pendentes', 'agendadas', 'finalizadas', 'canceladas'].includes(h)) setActiveTab(h);
+    }
+    window.addEventListener('hashchange', handleHash);
+    return () => window.removeEventListener('hashchange', handleHash);
+  }, []);
 
   useEffect(() => {
     if (usuario && usuario.tipo !== 'dono_bomba') { router.push('/'); return; }
@@ -52,6 +65,43 @@ export default function DonoDashboardPage() {
     try {
       const { error } = await supabase.from('solicitacoes').update({ status: ns }).eq('id', id);
       if (error) throw error;
+
+      // When accepting, create ordens order
+      if (ns === 'agendado') {
+        const sol = todas.find(s => s.id === id);
+        if (sol) {
+          const { data: maxOrdem } = await supabase.from('ordens')
+            .select('numero_ordem').order('numero_ordem', { ascending: false }).limit(1);
+          const nextNum = (maxOrdem?.[0]?.numero_ordem ?? 0) + 1;
+          await supabase.from('ordens').insert({
+            numero_ordem: nextNum,
+            uid_cliente: sol.uid_cliente,
+            nome_cliente: sol.nome_cliente,
+            telefone_cliente: sol.telefone_cliente || '',
+            uid_dono_bomba: sol.uid_dono_bomba,
+            nome_dono_bomba: sol.nome_dono_bomba,
+            telefone_dono: sol.telefone_dono || '',
+            capacidade: sol.capacidade,
+            volume: sol.volume,
+            data_servico: sol.data_servico,
+            hora_servico: sol.hora_servico,
+            status: 'agendado',
+          });
+        }
+      }
+
+      // When finalizing, update corresponding order status
+      if (ns === 'finalizado') {
+        const sol = todas.find(s => s.id === id);
+        if (sol) {
+          await supabase.from('ordens')
+            .update({ status: 'finalizado' })
+            .eq('uid_cliente', sol.uid_cliente)
+            .eq('uid_dono_bomba', sol.uid_dono_bomba)
+            .eq('data_servico', sol.data_servico);
+        }
+      }
+
       toast.success(ns === 'agendado' ? 'Aceita!' : ns === 'finalizado' ? 'Finalizado!' : 'Cancelado.');
       setSelected(null); loadData();
     } catch (e: any) { toast.error(e.message || 'Erro'); }
@@ -211,7 +261,7 @@ export default function DonoDashboardPage() {
       )}
 
       {/* Tabs */}
-      <Tabs defaultValue="pendentes">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         {/* Mobile: 2x2 grid. Desktop: 4x1 */}
         <TabsList className="grid grid-cols-2 w-full mb-4 bg-gray-50 rounded-xl p-1 gap-1 sm:grid-cols-4 sm:mb-6">
           <TabsTrigger value="pendentes" className="data-[state=active]:bg-white data-[state=active]:shadow-sm text-[11px] sm:text-xs rounded-lg py-2">
