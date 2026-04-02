@@ -104,7 +104,7 @@ export default function CadastroPage() {
     <Card className="bg-white/95 backdrop-blur border-0 shadow-2xl shadow-black/20">
       <CardHeader className="text-center">
         <CardTitle className="text-2xl text-[#1A1A2E]">Criar Conta</CardTitle>
-        <CardDescription className="text-gray-500">
+        <CardDescription className="text-[#6B7280]">
           Preencha seus dados para se cadastrar
         </CardDescription>
       </CardHeader>
@@ -117,7 +117,7 @@ export default function CadastroPage() {
             className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all ${
               tipo === 'cliente'
                 ? 'bg-white text-[#1A1A2E] shadow-sm'
-                : 'text-gray-500'
+                : 'text-[#9CA3AF]'
             }`}
           >
             <User size={16} />
@@ -129,7 +129,7 @@ export default function CadastroPage() {
             className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all ${
               tipo === 'dono_bomba'
                 ? 'bg-white text-[#1A1A2E] shadow-sm'
-                : 'text-gray-500'
+                : 'text-[#9CA3AF]'
             }`}
           >
             <Truck size={16} />
@@ -303,7 +303,7 @@ export default function CadastroPage() {
             </Button>
           </form>
 
-        <p className="text-center text-gray-500 text-sm mt-6">
+        <p className="text-center text-[#6B7280] text-sm mt-6">
           Já tem conta?{' '}
           <Link href="/login" className="text-[#FF6B00] font-semibold hover:underline">
             Fazer login

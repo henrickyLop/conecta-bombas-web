@@ -46,7 +46,7 @@ export default function AdminBombasPage() {
     <div>
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-[#1A1A2E]">Bombas Cadastradas</h1>
-        <p className="text-gray-500 mt-1">{bombas.length} bombas no sistema</p>
+        <p className="text-[#6B7280] mt-1">{bombas.length} bombas no sistema</p>
       </div>
 
       {loading ? (
@@ -56,7 +56,7 @@ export default function AdminBombasPage() {
       ) : bombas.length === 0 ? (
         <Card>
           <CardContent className="p-12 text-center">
-            <Truck size={48} className="text-gray-300 mx-auto mb-4" />
+            <Truck size={48} className="text-[#9CA3AF] mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-[#1A1A2E]">Nenhuma bomba cadastrada</h3>
           </CardContent>
         </Card>
@@ -73,11 +73,11 @@ export default function AdminBombasPage() {
                 </div>
                 <h3 className="font-semibold text-[#1A1A2E]">{b.nome_dono}</h3>
                 <div className="space-y-2 mt-3 text-sm">
-                  <div className="flex items-center gap-2 text-gray-600">
+                  <div className="flex items-center gap-2 text-[#4B5563]">
                     <MapPin size={14} />
                     <span>{b.cidade} - {b.estado}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-gray-600">
+                  <div className="flex items-center gap-2 text-[#4B5563]">
                     <Settings size={14} />
                     <span>{b.tipo} · {b.capacidade}</span>
                   </div>

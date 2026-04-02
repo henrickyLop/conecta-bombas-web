@@ -11,6 +11,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ClipboardList, Phone, MessageSquare, Calendar, Clock, Volume2 } from 'lucide-react';
 import type { Solicitacao } from '@/lib/types';
 
+function normalizeStatus(s: Solicitacao): Solicitacao {
+  if (s.status === 'aceita') return { ...s, status: 'agendado' };
+  if (s.status === 'recusada') return { ...s, status: 'cancelado' };
+  return s;
+}
+
 export default function ClienteSolicitacoesPage() {
   const { usuario } = useAuth();
   const [solicitacoes, setSolicitacoes] = useState<Solicitacao[]>([]);
@@ -31,7 +37,7 @@ export default function ClienteSolicitacoesPage() {
         .eq('uid_cliente', usuario!.id)
         .order('criado_em', { ascending: false });
       if (error) throw error;
-      setSolicitacoes(data as Solicitacao[] || []);
+      setSolicitacoes((data as Solicitacao[] || []).map(normalizeStatus));
     } catch (e) {
       console.error(e);
     } finally {
@@ -39,15 +45,12 @@ export default function ClienteSolicitacoesPage() {
     }
   }
 
-  function statusBadge(status: string) {
+  function statusBadge(status: Solicitacao['status']) {
     const map: Record<string, { text: string; cls: string; icon: string }> = {
       agendado: { text: 'Agendada', cls: 'bg-blue-100 text-blue-700', icon: '📅' },
       finalizado: { text: 'Finalizada', cls: 'bg-green-100 text-green-700', icon: '✅' },
       cancelado: { text: 'Cancelada', cls: 'bg-red-100 text-red-700', icon: '❌' },
-      // Compatibilidade com status antigos
       pendente: { text: 'Aguardando', cls: 'bg-amber-100 text-amber-700', icon: '⏳' },
-      aceita: { text: 'Agendada', cls: 'bg-blue-100 text-blue-700', icon: '📅' },
-      recusada: { text: 'Cancelada', cls: 'bg-red-100 text-red-700', icon: '❌' },
     };
     const s = map[status] || map.agendado;
     return <Badge className={`${s.cls} px-3 py-1`}>{s.icon} {s.text}</Badge>;
@@ -71,7 +74,7 @@ export default function ClienteSolicitacoesPage() {
     <div>
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-[#1A1A2E]">Minhas Solicitações</h1>
-        <p className="text-gray-500 mt-1">Histórico completo de solicitações</p>
+        <p className="text-[#6B7280] mt-1">Histórico completo de solicitações</p>
       </div>
 
       {loading ? (
@@ -81,9 +84,9 @@ export default function ClienteSolicitacoesPage() {
       ) : solicitacoes.length === 0 ? (
         <Card>
           <CardContent className="p-12 text-center">
-            <ClipboardList size={48} className="text-gray-300 mx-auto mb-4" />
+            <ClipboardList size={48} className="text-[#9CA3AF] mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-[#1A1A2E]">Nenhuma solicitação</h3>
-            <p className="text-gray-500 mt-1">Busque bombas disponíveis para começar</p>
+            <p className="text-[#6B7280] mt-1">Busque bombas disponíveis para começar</p>
           </CardContent>
         </Card>
       ) : (
@@ -98,11 +101,11 @@ export default function ClienteSolicitacoesPage() {
                     </div>
                     <div>
                       <p className="font-semibold text-[#1A1A2E]">{s.nome_dono_bomba}</p>
-                      <p className="text-sm text-gray-500">{s.volume}m³ · Bomba {String(s.capacidade).replace(/[^0-9]/g, '')}</p>
+                      <p className="text-sm text-[#6B7280]">{s.volume}m³ · Bomba {String(s.capacidade).replace(/[^0-9]/g, '')}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <div className="text-right text-sm text-gray-500">
+                    <div className="text-right text-sm text-[#6B7280]">
                       <p>{s.data_servico}</p>
                       <p>{s.hora_servico}</p>
                     </div>
@@ -132,41 +135,41 @@ export default function ClienteSolicitacoesPage() {
 
               <div className="grid grid-cols-2 gap-3 text-sm bg-gray-50 rounded-xl p-4">
                 <div>
-                  <span className="text-gray-500">Dono:</span>
+                  <span className="text-[#6B7280]">Dono:</span>
                   <p className="font-medium text-[#1A1A2E]">{selected.nome_dono_bomba}</p>
                 </div>
                 <div>
-                  <span className="text-gray-500">Volume:</span>
+                  <span className="text-[#6B7280]">Volume:</span>
                   <p className="font-medium text-[#1A1A2E]">{selected.volume} m³</p>
                 </div>
                 <div>
-                  <span className="text-gray-500">Capacidade:</span>
+                  <span className="text-[#6B7280]">Capacidade:</span>
                   <p className="font-medium text-[#1A1A2E]">Bomba {String(selected?.capacidade).replace(/[^0-9]/g, '')}</p>
                 </div>
                 <div>
-                  <span className="text-gray-500">Data:</span>
+                  <span className="text-[#6B7280]">Data:</span>
                   <p className="font-medium text-[#1A1A2E]">{selected.data_servico}</p>
                 </div>
                 <div>
-                  <span className="text-gray-500">Hora:</span>
+                  <span className="text-[#6B7280]">Hora:</span>
                   <p className="font-medium text-[#1A1A2E]">{selected.hora_servico}</p>
                 </div>
                 <div>
-                  <span className="text-gray-500">Telefone:</span>
+                  <span className="text-[#6B7280]">Telefone:</span>
                   <p className="font-medium text-[#1A1A2E]">{selected.telefone_dono || selected.telefone_cliente || '—'}</p>
                 </div>
               </div>
 
               {selected.observacoes ? (
                 <div>
-                  <span className="text-gray-500">Observações:</span>
+                  <span className="text-[#6B7280]">Observações:</span>
                   <p className="text-[#1A1A2E] mt-1">{selected.observacoes}</p>
                 </div>
               ) : (
-                <div className="text-gray-400 text-sm italic">Sem observações registradas</div>
+                <div className="text-[#9CA3AF] text-sm italic">Sem observações registradas</div>
               )}
 
-              {(selected.status === 'agendado' || selected.status === 'aceita' || selected.status === 'pendente') && (
+              {(selected.status === 'agendado' || selected.status === 'pendente') && (
                 selected.telefone_dono ? (
                   <a
                     href={whatsappLink(selected.telefone_dono)}

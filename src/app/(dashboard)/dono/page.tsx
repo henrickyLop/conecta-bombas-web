@@ -49,10 +49,11 @@ export default function DonoDashboardPage() {
   }, [usuario, router]);
 
   async function loadData() {
+    if (!usuario?.id) return;
     setLoading(true);
     try {
       const { data, error } = await supabase.from('solicitacoes')
-        .select('*').eq('uid_dono_bomba', usuario!.id)
+        .select('*').eq('uid_dono_bomba', usuario.id)
         .order('criado_em', { ascending: false });
       if (error) throw error;
       setTodas((data as Solicitacao[] || []).map(normalizeStatus));
@@ -60,7 +61,7 @@ export default function DonoDashboardPage() {
     finally { setLoading(false); }
   }
 
-  async function updateStatus(id: string, ns: string) {
+  async function updateStatus(id: string, ns: 'agendado' | 'finalizado' | 'cancelado') {
     setActionLoading(true);
     try {
       const { error } = await supabase.from('solicitacoes').update({ status: ns }).eq('id', id);
@@ -98,7 +99,8 @@ export default function DonoDashboardPage() {
             .update({ status: 'finalizado' })
             .eq('uid_cliente', sol.uid_cliente)
             .eq('uid_dono_bomba', sol.uid_dono_bomba)
-            .eq('data_servico', sol.data_servico);
+            .eq('data_servico', sol.data_servico)
+            .eq('status', 'agendado'); // only update if still agendado
         }
       }
 
@@ -145,12 +147,12 @@ export default function DonoDashboardPage() {
           </div>
           <div className="min-w-0 flex-1">
             <p className="font-semibold text-[#1A1A2E] text-sm truncate">{s.nome_cliente}</p>
-            <p className="text-[11px] text-gray-400">{s.volume}m³</p>
+            <p className="text-[11px] text-[#9CA3AF]">{s.volume}m³</p>
           </div>
         </div>
         {/* Date/Time + Badge */}
         <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
+          <div className="flex items-center gap-1.5 text-[11px] text-[#6B7280]">
             <Calendar size={12} />
             <span>{s.data_servico} {s.hora_servico}</span>
           </div>
@@ -179,7 +181,7 @@ export default function DonoDashboardPage() {
         {/* View details */}
         <button
           onClick={() => setSelected(s)}
-          className="w-full text-center text-[10px] text-gray-400 hover:text-gray-600 py-1 -mb-0.5"
+          className="w-full text-center text-[10px] text-[#9CA3AF] hover:text-[#4B5563] py-1 -mb-0.5"
         >
           Ver detalhes
         </button>
@@ -192,7 +194,7 @@ export default function DonoDashboardPage() {
       {/* Header */}
       <div className="mb-5">
         <h1 className="text-xl font-bold text-[#1A1A2E]">Dashboard</h1>
-        <p className="text-gray-400 text-sm">Olá, {usuario.nome}</p>
+        <p className="text-[#6B7280] text-sm">Olá, {usuario.nome}</p>
       </div>
 
       {/* Stats: 2x2 grid mobile */}
@@ -201,7 +203,7 @@ export default function DonoDashboardPage() {
           <CardContent className="p-3">
             <div className="flex items-center gap-2 mb-1">
               <div className="w-2 h-2 rounded-full bg-amber-400" />
-              <span className="text-[10px] text-gray-400 uppercase tracking-wide">Aguardando</span>
+              <span className="text-[10px] text-[#9CA3AF] uppercase tracking-wide">Aguardando</span>
             </div>
             <div className="text-xl font-bold text-[#1A1A2E]">{pendentes.length}</div>
           </CardContent>
@@ -210,7 +212,7 @@ export default function DonoDashboardPage() {
           <CardContent className="p-3">
             <div className="flex items-center gap-2 mb-1">
               <div className="w-2 h-2 rounded-full bg-orange-400" />
-              <span className="text-[10px] text-gray-400 uppercase tracking-wide">Agendadas</span>
+              <span className="text-[10px] text-[#9CA3AF] uppercase tracking-wide">Agendadas</span>
             </div>
             <div className="text-xl font-bold text-[#1A1A2E]">{agendadas.length}</div>
           </CardContent>
@@ -219,7 +221,7 @@ export default function DonoDashboardPage() {
           <CardContent className="p-3">
             <div className="flex items-center gap-2 mb-1">
               <div className="w-2 h-2 rounded-full bg-green-400" />
-              <span className="text-[10px] text-gray-400 uppercase tracking-wide">Finalizadas</span>
+              <span className="text-[10px] text-[#9CA3AF] uppercase tracking-wide">Finalizadas</span>
             </div>
             <div className="text-xl font-bold text-[#1A1A2E]">{finalizadas.length}</div>
           </CardContent>
@@ -228,7 +230,7 @@ export default function DonoDashboardPage() {
           <CardContent className="p-3">
             <div className="flex items-center gap-2 mb-1">
               <div className="w-2 h-2 rounded-full bg-blue-400" />
-              <span className="text-[10px] text-gray-400 uppercase tracking-wide">Total</span>
+              <span className="text-[10px] text-[#9CA3AF] uppercase tracking-wide">Total</span>
             </div>
             <div className="text-xl font-bold text-[#1A1A2E]">{todas.length}</div>
           </CardContent>
@@ -285,8 +287,8 @@ export default function DonoDashboardPage() {
           ) : pendentes.length === 0 ? (
             <Card className="bg-white border-0 shadow-sm rounded-xl">
               <CardContent className="py-10 text-center">
-                <Clock size={36} className="text-gray-200 mx-auto mb-3" />
-                <p className="text-sm font-medium text-gray-400">Nenhuma solicitação aguardando</p>
+                <Clock size={36} className="text-[#9CA3AF] mx-auto mb-3" />
+                <p className="text-sm font-medium text-[#6B7280]">Nenhuma solicitação aguardando</p>
               </CardContent>
             </Card>
           ) : (
@@ -301,8 +303,8 @@ export default function DonoDashboardPage() {
           {agendadas.length === 0 ? (
             <Card className="bg-white border-0 shadow-sm rounded-xl">
               <CardContent className="py-10 text-center">
-                <CheckCircle size={36} className="text-gray-200 mx-auto mb-3" />
-                <p className="text-sm font-medium text-gray-400">Nenhuma ordem agendada</p>
+                <CheckCircle size={36} className="text-[#9CA3AF] mx-auto mb-3" />
+                <p className="text-sm font-medium text-[#6B7280]">Nenhuma ordem agendada</p>
               </CardContent>
             </Card>
           ) : (
@@ -315,7 +317,7 @@ export default function DonoDashboardPage() {
                     </div>
                     <div className="min-w-0">
                       <p className="font-semibold text-[#1A1A2E] text-sm truncate">{s.nome_cliente}</p>
-                      <p className="text-[11px] text-gray-400">{s.volume}m³ · {s.data_servico}</p>
+                      <p className="text-[11px] text-[#9CA3AF]">{s.volume}m³ · {s.data_servico}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
@@ -324,7 +326,7 @@ export default function DonoDashboardPage() {
                       onClick={() => updateStatus(s.id, 'finalizado')} disabled={actionLoading}>
                       <CheckCircle size={12} className="mr-0.5" /> Finalizar
                     </Button>
-                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-gray-400"
+                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-[#9CA3AF]"
                       onClick={() => setSelected(s)}>
                       <Eye size={14} />
                     </Button>
@@ -340,8 +342,8 @@ export default function DonoDashboardPage() {
           {finalizadas.length === 0 ? (
             <Card className="bg-white border-0 shadow-sm rounded-xl">
               <CardContent className="py-10 text-center">
-                <History size={36} className="text-gray-200 mx-auto mb-3" />
-                <p className="text-sm font-medium text-gray-400">Nenhum serviço finalizado</p>
+                <History size={36} className="text-[#9CA3AF] mx-auto mb-3" />
+                <p className="text-sm font-medium text-[#6B7280]">Nenhum serviço finalizado</p>
               </CardContent>
             </Card>
           ) : (
@@ -354,7 +356,7 @@ export default function DonoDashboardPage() {
                     </div>
                     <div className="min-w-0">
                       <p className="font-semibold text-[#1A1A2E] text-sm truncate">{s.nome_cliente}</p>
-                      <p className="text-[11px] text-gray-400">{s.volume}m³ · {s.data_servico}</p>
+                      <p className="text-[11px] text-[#9CA3AF]">{s.volume}m³ · {s.data_servico}</p>
                     </div>
                   </div>
                   <Badge className="bg-green-50 text-green-600 border border-green-100 text-[10px] shrink-0">Finalizada</Badge>
@@ -369,8 +371,8 @@ export default function DonoDashboardPage() {
           {canceladas.length === 0 ? (
             <Card className="bg-white border-0 shadow-sm rounded-xl">
               <CardContent className="py-10 text-center">
-                <X size={36} className="text-gray-200 mx-auto mb-3" />
-                <p className="text-sm font-medium text-gray-400">Nenhuma cancelada</p>
+                <X size={36} className="text-[#9CA3AF] mx-auto mb-3" />
+                <p className="text-sm font-medium text-[#6B7280]">Nenhuma cancelada</p>
               </CardContent>
             </Card>
           ) : (
@@ -383,7 +385,7 @@ export default function DonoDashboardPage() {
                     </div>
                     <div className="min-w-0">
                       <p className="font-semibold text-[#1A1A2E] text-sm truncate">{s.nome_cliente}</p>
-                      <p className="text-[11px] text-gray-400">{s.volume}m³ · {s.data_servico}</p>
+                      <p className="text-[11px] text-[#9CA3AF]">{s.volume}m³ · {s.data_servico}</p>
                     </div>
                   </div>
                   <Badge className="bg-red-50 text-red-600 border border-red-100 text-[10px] shrink-0">Cancelada</Badge>
@@ -404,29 +406,29 @@ export default function DonoDashboardPage() {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3 text-sm bg-gray-50 rounded-xl p-4">
                 <div className="flex items-center gap-2">
-                  <User size={14} className="text-gray-400" />
+                  <User size={14} className="text-[#9CA3AF]" />
                   <span className="font-medium text-[#1A1A2E]">{selected.nome_cliente}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Phone size={14} className="text-gray-400" />
+                  <Phone size={14} className="text-[#9CA3AF]" />
                   <span className="font-medium text-[#1A1A2E]">{selected.telefone_cliente || '—'}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <ClipboardList size={14} className="text-gray-400" />
+                  <ClipboardList size={14} className="text-[#9CA3AF]" />
                   <span className="font-medium text-[#1A1A2E]">{selected.volume} m³</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Calendar size={14} className="text-gray-400" />
+                  <Calendar size={14} className="text-[#9CA3AF]" />
                   <span className="font-medium text-[#1A1A2E]">{selected.data_servico} às {selected.hora_servico}</span>
                 </div>
               </div>
               {selected.observacoes ? (
                 <div>
-                  <span className="text-gray-500 text-sm">Observações:</span>
+                  <span className="text-[#6B7280] text-sm">Observações:</span>
                   <p className="text-[#1A1A2E] mt-1">{selected.observacoes}</p>
                 </div>
               ) : (
-                <div className="text-gray-400 text-sm italic">Sem observações</div>
+                <div className="text-[#9CA3AF] text-sm italic">Sem observações</div>
               )}
               {selected.status === 'pendente' && (
                 <div className="flex gap-2 pt-2">

@@ -149,7 +149,7 @@ export default function ClienteBuscarPage() {
     <div>
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-[#1A1A2E]">Buscar Bombas</h1>
-        <p className="text-gray-500 mt-1">Encontre bombas disponíveis na sua região</p>
+        <p className="text-[#6B7280] mt-1">Encontre bombas disponíveis na sua região</p>
       </div>
 
       {/* Search - estado primeiro */}
@@ -223,16 +223,16 @@ export default function ClienteBuscarPage() {
       {loading && (
         <div className="text-center py-12">
           <Loader2 className="animate-spin text-[#FF6B00] mx-auto" size={32} />
-          <p className="text-gray-500 mt-3">Buscando bombas...</p>
+          <p className="text-[#6B7280] mt-3">Buscando bombas...</p>
         </div>
       )}
 
       {!loading && searched && bombas.length === 0 && (
         <Card>
           <CardContent className="p-12 text-center">
-            <Truck size={48} className="text-gray-300 mx-auto mb-4" />
+            <Truck size={48} className="text-[#9CA3AF] mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-[#1A1A2E]">Nenhuma bomba encontrada</h3>
-            <p className="text-gray-500 mt-1">Tente outra cidade ou estado</p>
+            <p className="text-[#6B7280] mt-1">Tente outra cidade ou estado</p>
           </CardContent>
         </Card>
       )}
@@ -251,7 +251,7 @@ export default function ClienteBuscarPage() {
                     <Badge className="bg-green-100 text-green-700">Disponível</Badge>
                   </div>
                   <h3 className="font-semibold text-[#1A1A2E]">{b.nome_dono}</h3>
-                  <div className="space-y-2 mt-3 text-sm text-gray-600">
+                  <div className="space-y-2 mt-3 text-sm text-[#4B5563]">
                     <div className="flex items-center gap-2">
                       <MapPin size={14} />
                       <span>{b.cidade} - {b.estado}</span>
@@ -285,7 +285,7 @@ export default function ClienteBuscarPage() {
             <CardContent>
               <div
                 className="rounded-xl overflow-hidden border border-gray-200"
-                style={{ height: 350 }}
+                style={{ height: 'min(350px, 50vh)' }}
               >
                 <MapContainer
                   center={mapCenter}
@@ -308,7 +308,7 @@ export default function ClienteBuscarPage() {
                         <Popup>
                           <div className="text-sm">
                             <p className="font-semibold text-[#FF6B00]">{b.nome_dono}</p>
-                            <p className="text-gray-600">{b.cidade} - {b.estado}</p>
+                            <p className="text-[#4B5563]">{b.cidade} - {b.estado}</p>
                             <p><span className="font-medium">Tipo:</span> {b.tipo}</p>
                             <p><span className="font-medium">Capacidade:</span> {b.capacidade} L/h</p>
                           </div>
@@ -326,9 +326,9 @@ export default function ClienteBuscarPage() {
       {!searched && !loading && (
         <Card>
           <CardContent className="p-12 text-center">
-            <Search size={48} className="text-gray-300 mx-auto mb-4" />
+            <Search size={48} className="text-[#9CA3AF] mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-[#1A1A2E]">Busque por bombas</h3>
-            <p className="text-gray-500 mt-1">Selecione o estado e a cidade</p>
+            <p className="text-[#6B7280] mt-1">Selecione o estado e a cidade</p>
           </CardContent>
         </Card>
       )}
@@ -348,7 +348,7 @@ export default function ClienteBuscarPage() {
             <div className="space-y-4">
               <div className="bg-orange-50 rounded-lg p-3 text-sm">
                 <p className="font-medium text-[#1A1A2E]">{selectedBomba.tipo}</p>
-                <p className="text-gray-600">Capacidade: {selectedBomba.capacidade} L/h</p>
+                <p className="text-[#4B5563]">Capacidade: {selectedBomba.capacidade} L/h</p>
               </div>
 
               <div>

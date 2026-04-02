@@ -79,8 +79,8 @@ export default function AdminUsuariosPage() {
     if (filtered.length === 0) {
       return (
         <div className="text-center py-12">
-          <Users size={40} className="text-gray-300 mx-auto mb-3" />
-          <p className="text-gray-500">Nenhum usuário encontrado</p>
+          <Users size={40} className="text-[#9CA3AF] mx-auto mb-3" />
+          <p className="text-[#6B7280]">Nenhum usuário encontrado</p>
         </div>
       );
     }
@@ -101,13 +101,13 @@ export default function AdminUsuariosPage() {
               </div>
               <div>
                 <p className="font-medium text-[#1A1A2E]">{u.nome}</p>
-                <p className="text-sm text-gray-500">{u.email} · {u.cidade}-{u.estado}</p>
+                <p className="text-sm text-[#6B7280]">{u.email} · {u.cidade}-{u.estado}</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
               <Badge variant="outline">{u.tipo === 'dono_bomba' ? 'Dono' : u.tipo}</Badge>
               {statusBadge(u.status)}
-              <ChevronRight size={16} className="text-gray-400" />
+              <ChevronRight size={16} className="text-[#9CA3AF]" />
             </div>
           </div>
         ))}
@@ -119,7 +119,7 @@ export default function AdminUsuariosPage() {
     <div>
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-[#1A1A2E]">Usuários</h1>
-        <p className="text-gray-500 mt-1">Gerencie todos os usuários cadastrados</p>
+        <p className="text-[#6B7280] mt-1">Gerencie todos os usuários cadastrados</p>
       </div>
 
       <Tabs defaultValue="all" className="space-y-6">
@@ -151,19 +151,19 @@ export default function AdminUsuariosPage() {
             <div className="space-y-6">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="text-gray-500">Email:</span>
+                  <span className="text-[#6B7280]">Email:</span>
                   <p className="font-medium text-[#1A1A2E]">{selectedUser.email}</p>
                 </div>
                 <div>
-                  <span className="text-gray-500">Telefone:</span>
+                  <span className="text-[#6B7280]">Telefone:</span>
                   <p className="font-medium text-[#1A1A2E]">{selectedUser.telefone || '—'}</p>
                 </div>
                 <div>
-                  <span className="text-gray-500">Local:</span>
+                  <span className="text-[#6B7280]">Local:</span>
                   <p className="font-medium text-[#1A1A2E]">{selectedUser.cidade}/{selectedUser.estado}</p>
                 </div>
                 <div>
-                  <span className="text-gray-500">Status:</span>
+                  <span className="text-[#6B7280]">Status:</span>
                   <div className="mt-1">{statusBadge(selectedUser.status)}</div>
                 </div>
               </div>
@@ -181,10 +181,11 @@ export default function AdminUsuariosPage() {
                           <Badge className={
                             s.status === 'finalizado' ? 'bg-green-100 text-green-700' :
                             s.status === 'cancelado' ? 'bg-red-100 text-red-700' :
+                            s.status === 'pendente' ? 'bg-amber-100 text-amber-700' :
                             'bg-blue-100 text-blue-700'
-                          }>{s.status}</Badge>
+                          }>{s.status === 'agendado' ? 'Agendada' : s.status === 'pendente' ? 'Pendente' : s.status === 'finalizado' ? 'Finalizada' : s.status}</Badge>
                         </div>
-                        <p className="text-gray-500 text-xs">{s.volume}m³ · {s.data_servico} às {s.hora_servico}</p>
+                        <p className="text-[#6B7280] text-xs">{s.volume}m³ · {s.data_servico} às {s.hora_servico}</p>
                       </div>
                     ))}
                   </div>
@@ -200,10 +201,10 @@ export default function AdminUsuariosPage() {
                         <div className="flex items-center justify-between">
                           <p className="font-medium text-[#1A1A2E]">Ordem #{o.numero_ordem}</p>
                           <Badge className={o.status === 'finalizado' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}>
-                            {o.status}
+                            {o.status === 'agendado' ? 'Agendada' : o.status === 'finalizado' ? 'Finalizada' : o.status}
                           </Badge>
                         </div>
-                        <p className="text-gray-500 text-xs">
+                        <p className="text-[#6B7280] text-xs">
                           {o.nome_cliente} · {o.volume}m³ · {o.data_servico}
                         </p>
                       </div>

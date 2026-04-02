@@ -63,7 +63,7 @@ export default function AdminPage() {
     <div>
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-[#1A1A2E]">Dashboard</h1>
-        <p className="text-gray-500 mt-1">Bem-vindo de volta, {usuario.nome}</p>
+        <p className="text-[#6B7280] mt-1">Bem-vindo de volta, {usuario.nome}</p>
       </div>
 
       {loadingStats ? (
@@ -83,14 +83,14 @@ export default function AdminPage() {
           <Link href="/admin/pendentes">
             <Card className="hover:shadow-lg transition-shadow border-l-4 border-l-amber-500">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-gray-500">Pendentes</CardTitle>
+                <CardTitle className="text-sm font-medium text-[#6B7280]">Pendentes</CardTitle>
                 <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center">
                   <Users size={20} className="text-amber-600" />
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-[#1A1A2E]">{stats.pendentes}</div>
-                <p className="text-xs text-gray-500 mt-1">Aguardando aprovação</p>
+                <p className="text-xs text-[#6B7280] mt-1">Aguardando aprovação</p>
               </CardContent>
             </Card>
           </Link>
@@ -98,14 +98,14 @@ export default function AdminPage() {
           <Link href="/admin/usuarios">
             <Card className="hover:shadow-lg transition-shadow border-l-4 border-l-blue-500">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-gray-500">Usuários</CardTitle>
+                <CardTitle className="text-sm font-medium text-[#6B7280]">Usuários</CardTitle>
                 <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
                   <Users size={20} className="text-blue-600" />
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-[#1A1A2E]">{stats.clientes + stats.donos}</div>
-                <p className="text-xs text-gray-500 mt-1">{stats.clientes} clientes · {stats.donos} donos</p>
+                <p className="text-xs text-[#6B7280] mt-1">{stats.clientes} clientes · {stats.donos} donos</p>
               </CardContent>
             </Card>
           </Link>
@@ -113,14 +113,14 @@ export default function AdminPage() {
           <Link href="/admin/bombas">
             <Card className="hover:shadow-lg transition-shadow border-l-4 border-l-green-500">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-gray-500">Bombas</CardTitle>
+                <CardTitle className="text-sm font-medium text-[#6B7280]">Bombas</CardTitle>
                 <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
                   <Truck size={20} className="text-green-600" />
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-[#1A1A2E]">{stats.ordens > 0 ? stats.donos : 0}</div>
-                <p className="text-xs text-gray-500 mt-1">Bombas cadastradas</p>
+                <p className="text-xs text-[#6B7280] mt-1">Bombas cadastradas</p>
               </CardContent>
             </Card>
           </Link>
@@ -128,14 +128,14 @@ export default function AdminPage() {
           <Link href="/admin/ordens">
             <Card className="hover:shadow-lg transition-shadow border-l-4 border-l-[#FF6B00]">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-gray-500">Ordens</CardTitle>
+                <CardTitle className="text-sm font-medium text-[#6B7280]">Ordens</CardTitle>
                 <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center">
                   <ClipboardList size={20} className="text-[#FF6B00]" />
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-[#1A1A2E]">{stats.ordens}</div>
-                <p className="text-xs text-gray-500 mt-1">Total de ordens</p>
+                <p className="text-xs text-[#6B7280] mt-1">Total de ordens</p>
               </CardContent>
             </Card>
           </Link>
@@ -189,7 +189,7 @@ export default function AdminPage() {
           </CardHeader>
           <CardContent>
             {stats.ordens === 0 ? (
-              <div className="flex items-center justify-center h-[280px] text-gray-400">
+              <div className="flex items-center justify-center h-[280px] text-[#6B7280]">
                 Nenhuma ordem registrada
               </div>
             ) : (

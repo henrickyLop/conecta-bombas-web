@@ -13,25 +13,37 @@ export function useAuth() {
   const router = useRouter();
 
   useEffect(() => {
+    let cancelled = false;
+
     async function getSession() {
       const { data: { session } } = await supabase.auth.getSession();
+      if (cancelled) return;
       setUser(session?.user ?? null);
-      setLoading(false);
+
+      if (session?.user) {
+        // Don't set loading=false here — wait for fetchUsuario
+        await fetchUsuario(session.user.email ?? '');
+      } else {
+        setUsuario(null);
+      }
+      if (!cancelled) setLoading(false);
     }
     getSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (cancelled) return;
       setUser(session?.user ?? null);
-      setLoading(false);
 
       if (!session?.user) {
         setUsuario(null);
+        setLoading(false);
       } else {
-        fetchUsuario(session.user.email ?? '');
+        await fetchUsuario(session.user.email ?? '');
+        if (!cancelled) setLoading(false);
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => { cancelled = true; subscription.unsubscribe(); };
   }, []);
 
   const fetchUsuario = async (email: string) => {
@@ -40,13 +52,16 @@ export function useAuth() {
       .select('*')
       .eq('email', email)
       .single();
+    // Return the promise so callers can await if needed
     setUsuario(data as Usuario | null);
+    return data as Usuario | null;
   };
 
   const refreshUsuario = async () => {
     if (user) {
-      fetchUsuario(user.email ?? '');
+      return fetchUsuario(user.email ?? '');
     }
+    return null;
   };
 
   const signOut = async () => {

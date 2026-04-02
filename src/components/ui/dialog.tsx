@@ -63,7 +63,7 @@ function DialogTitle({ className, children }: { className?: string; children: Re
 }
 
 function DialogDescription({ className, children }: { className?: string; children: React.ReactNode }) {
-  return <p className={cn("text-sm text-gray-500", className)}>{children}</p>
+  return <p className={cn("text-sm text-[#6B7280]", className)}>{children}</p>
 }
 
 function DialogClose({ children, onClick }: { children: React.ReactNode; onClick?: () => void }) {

@@ -14,6 +14,12 @@ import {
   AreaChart, Area,
 } from 'recharts';
 
+function normalizeStatus(s: Solicitacao): Solicitacao {
+  if (s.status === 'aceita') return { ...s, status: 'agendado' };
+  if (s.status === 'recusada') return { ...s, status: 'cancelado' };
+  return s;
+}
+
 export default function ClientePage() {
   const { usuario, loading } = useAuth();
   const router = useRouter();
@@ -36,7 +42,7 @@ export default function ClientePage() {
           .eq('uid_cliente', usuario!.id)
           .order('criado_em', { ascending: false });
 
-        const sols = data as Solicitacao[] || [];
+        const sols = (data as Solicitacao[] || []).map(normalizeStatus);
         setStats({
           total: sols.length,
           agendados: sols.filter(s => s.status === 'agendado').length,
@@ -71,25 +77,25 @@ export default function ClientePage() {
     <div>
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-[#1A1A2E]">Minha Área</h1>
-        <p className="text-gray-500 mt-1">Olá, {usuario.nome}</p>
+        <p className="text-[#6B7280] mt-1">Olá, {usuario.nome}</p>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <Card className="border-l-4 border-l-blue-500">
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-gray-500">Total</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-[#6B7280]">Total</CardTitle></CardHeader>
           <CardContent><div className="text-3xl font-bold text-[#1A1A2E]">{stats.total}</div></CardContent>
         </Card>
         <Card className="border-l-4 border-l-amber-500">
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-gray-500">Agendados</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-[#6B7280]">Agendados</CardTitle></CardHeader>
           <CardContent><div className="text-3xl font-bold text-[#1A1A2E]">{stats.agendados}</div></CardContent>
         </Card>
         <Card className="border-l-4 border-l-green-500">
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-gray-500">Finalizados</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-[#6B7280]">Finalizados</CardTitle></CardHeader>
           <CardContent><div className="text-3xl font-bold text-[#1A1A2E]">{stats.finalizados}</div></CardContent>
         </Card>
         <Card className="border-l-4 border-l-red-500">
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-gray-500">Cancelados</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-[#6B7280]">Cancelados</CardTitle></CardHeader>
           <CardContent><div className="text-3xl font-bold text-[#1A1A2E]">{stats.cancelados}</div></CardContent>
         </Card>
       </div>
@@ -159,7 +165,7 @@ export default function ClientePage() {
               </div>
               <div>
                 <h3 className="font-semibold text-[#1A1A2E] text-lg">Buscar Bombas</h3>
-                <p className="text-gray-500 text-sm">Encontre bombas na sua região</p>
+                <p className="text-[#6B7280] text-sm">Encontre bombas na sua região</p>
               </div>
             </CardContent>
           </Card>
@@ -172,7 +178,7 @@ export default function ClientePage() {
               </div>
               <div>
                 <h3 className="font-semibold text-[#1A1A2E] text-lg">Minhas Solicitações</h3>
-                <p className="text-gray-500 text-sm">Acompanhe o status de todas</p>
+                <p className="text-[#6B7280] text-sm">Acompanhe o status de todas</p>
               </div>
             </CardContent>
           </Card>
@@ -186,11 +192,11 @@ export default function ClientePage() {
         </CardHeader>
         <CardContent>
           {loadingStats ? (
-            <div className="text-center py-8 text-gray-400">Carregando...</div>
+            <div className="text-center py-8 text-[#6B7280]">Carregando...</div>
           ) : recentes.length === 0 ? (
             <div className="text-center py-8">
-              <ClipboardList size={40} className="text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-500">Nenhuma solicitação ainda</p>
+              <ClipboardList size={40} className="text-[#9CA3AF] mx-auto mb-3" />
+              <p className="text-[#6B7280]">Nenhuma solicitação ainda</p>
               <Link href="/cliente/buscar" className="text-[#FF6B00] font-medium hover:underline mt-2 inline-block">
                 Buscar bombas disponíveis
               </Link>
@@ -201,20 +207,17 @@ export default function ClientePage() {
                 <div key={s.id} className="flex items-center justify-between bg-gray-50 rounded-lg p-3">
                   <div>
                     <p className="font-medium text-[#1A1A2E]">{s.nome_dono_bomba}</p>
-                    <p className="text-sm text-gray-500">{s.volume}m³ · {s.data_servico} às {s.hora_servico}</p>
+                    <p className="text-sm text-[#6B7280]">{s.volume}m³ · {s.data_servico} às {s.hora_servico}</p>
                   </div>
                   <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                     s.status === 'agendado' ? 'bg-amber-100 text-amber-700' :
-                    s.status === 'aceita' ? 'bg-amber-100 text-amber-700' :
                     s.status === 'pendente' ? 'bg-amber-100 text-amber-700' :
                     s.status === 'finalizado' ? 'bg-green-100 text-green-700' :
-                    s.status === 'cancelado' ? 'bg-red-100 text-red-700' :
-                    s.status === 'recusada' ? 'bg-red-100 text-red-700' :
-                    'bg-green-100 text-green-700'
+                    'bg-red-100 text-red-700'
                   }`}>
-                    {s.status === 'agendado' || s.status === 'aceita' || s.status === 'pendente' ? 'Agendada' : 
-                     s.status === 'finalizado' ? 'Finalizada' : 
-                     s.status === 'cancelado' || s.status === 'recusada' ? 'Cancelada' : 'Agendada'}
+                    {s.status === 'agendado' ? 'Agendada' :
+                     s.status === 'pendente' ? 'Pendente' :
+                     s.status === 'finalizado' ? 'Finalizada' : 'Cancelada'}
                   </span>
                 </div>
               ))}

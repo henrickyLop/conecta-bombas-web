@@ -36,7 +36,7 @@ export default function AdminOrdensPage() {
     <div>
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-[#1A1A2E]">Ordens de Bombeamento</h1>
-        <p className="text-gray-500 mt-1">{ordens.length} ordens registradas</p>
+        <p className="text-[#6B7280] mt-1">{ordens.length} ordens registradas</p>
       </div>
 
       {loading ? (
@@ -46,7 +46,7 @@ export default function AdminOrdensPage() {
       ) : ordens.length === 0 ? (
         <Card>
           <CardContent className="p-12 text-center">
-            <ClipboardList size={48} className="text-gray-300 mx-auto mb-4" />
+            <ClipboardList size={48} className="text-[#9CA3AF] mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-[#1A1A2E]">Nenhuma ordem registrada</h3>
           </CardContent>
         </Card>
@@ -65,26 +65,26 @@ export default function AdminOrdensPage() {
                         <h3 className="font-semibold text-[#1A1A2E]">Ordem #{o.numero_ordem}</h3>
                         <Badge className={
                           o.status === 'finalizado' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
-                        }>{o.status}</Badge>
+                        }>{o.status === 'agendado' ? 'Agendada' : 'Finalizada'}</Badge>
                       </div>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm mt-2">
-                      <div className="flex items-center gap-2 text-gray-600">
+                      <div className="flex items-center gap-2 text-[#4B5563]">
                         <User size={14} />
                         <span className="text-[#1A1A2E]">{o.nome_cliente}</span>
                       </div>
-                      <div className="flex items-center gap-2 text-gray-600">
+                      <div className="flex items-center gap-2 text-[#4B5563]">
                         <User size={14} />
                         <span className="text-[#1A1A2E]">{o.nome_dono_bomba || 'Não atribuído'}</span>
                       </div>
-                      <div className="flex items-center gap-2 text-gray-600">
+                      <div className="flex items-center gap-2 text-[#4B5563]">
                         <span className="font-medium text-[#1A1A2E]">{o.volume}m³ · {o.capacidade}</span>
                       </div>
-                      <div className="flex items-center gap-2 text-gray-600">
+                      <div className="flex items-center gap-2 text-[#4B5563]">
                         <Calendar size={14} />
                         <span className="text-[#1A1A2E]">{o.data_servico}</span>
                       </div>
-                      <div className="flex items-center gap-2 text-gray-600">
+                      <div className="flex items-center gap-2 text-[#4B5563]">
                         <Clock size={14} />
                         <span className="text-[#1A1A2E]">{o.hora_servico}</span>
                       </div>

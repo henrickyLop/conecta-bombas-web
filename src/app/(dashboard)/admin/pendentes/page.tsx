@@ -96,7 +96,7 @@ export default function AdminPendentesPage() {
     <div>
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-[#1A1A2E]">Cadastros Pendentes</h1>
-        <p className="text-gray-500 mt-1">Aprove ou rejeite novos cadastros</p>
+        <p className="text-[#6B7280] mt-1">Aprove ou rejeite novos cadastros</p>
       </div>
 
       {loading ? (
@@ -108,9 +108,9 @@ export default function AdminPendentesPage() {
       ) : pendentes.length === 0 ? (
         <Card>
           <CardContent className="p-12 text-center">
-            <User size={48} className="text-gray-300 mx-auto mb-4" />
+            <User size={48} className="text-[#9CA3AF] mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-[#1A1A2E]">Nenhum cadastro pendente</h3>
-            <p className="text-gray-500">Todos os cadastros já foram avaliados</p>
+            <p className="text-[#6B7280]">Todos os cadastros já foram avaliados</p>
           </CardContent>
         </Card>
       ) : (
@@ -125,13 +125,13 @@ export default function AdminPendentesPage() {
                     </div>
                     <div>
                       <h3 className="font-semibold text-[#1A1A2E]">{u.nome}</h3>
-                      <p className="text-sm text-gray-500">{u.email} · {u.cidade}-{u.estado}</p>
+                      <p className="text-sm text-[#6B7280]">{u.email} · {u.cidade}-{u.estado}</p>
                       <Badge variant="outline" className="mt-1">
                         {u.tipo === 'dono_bomba' ? 'Dono de Bomba' : 'Cliente'}
                       </Badge>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap sm:flex-row flex-col w-full sm:w-auto">
                     <Button
                       variant="outline"
                       size="sm"
@@ -177,27 +177,27 @@ export default function AdminPendentesPage() {
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="text-gray-500">Nome:</span>
+                  <span className="text-[#6B7280]">Nome:</span>
                   <p className="font-medium text-[#1A1A2E]">{selectedUser.nome}</p>
                 </div>
                 <div>
-                  <span className="text-gray-500">CPF/CNPJ:</span>
+                  <span className="text-[#6B7280]">CPF/CNPJ:</span>
                   <p className="font-medium text-[#1A1A2E]">{selectedUser.cpf_cnpj || '—'}</p>
                 </div>
                 <div>
-                  <span className="text-gray-500">Email:</span>
+                  <span className="text-[#6B7280]">Email:</span>
                   <p className="font-medium text-[#1A1A2E]">{selectedUser.email}</p>
                 </div>
                 <div>
-                  <span className="text-gray-500">Telefone:</span>
+                  <span className="text-[#6B7280]">Telefone:</span>
                   <p className="font-medium text-[#1A1A2E]">{selectedUser.telefone || '—'}</p>
                 </div>
                 <div>
-                  <span className="text-gray-500">Cidade:</span>
+                  <span className="text-[#6B7280]">Cidade:</span>
                   <p className="font-medium text-[#1A1A2E]">{selectedUser.cidade}/{selectedUser.estado}</p>
                 </div>
                 <div>
-                  <span className="text-gray-500">Tipo:</span>
+                  <span className="text-[#6B7280]">Tipo:</span>
                   <p className="font-medium text-[#1A1A2E]">{selectedUser.tipo === 'dono_bomba' ? 'Dono de Bomba' : selectedUser.tipo}</p>
                 </div>
               </div>

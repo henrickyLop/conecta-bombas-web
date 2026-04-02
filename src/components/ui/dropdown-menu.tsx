@@ -77,7 +77,7 @@ function DropdownMenuGroup({ children, ...props }: React.HTMLAttributes<HTMLDivE
 }
 
 function DropdownMenuLabel({ className, children }: { className?: string; children: React.ReactNode }) {
-  return <div className={cn("px-3 py-1.5 text-xs font-medium text-gray-500", className)}>{children}</div>;
+  return <div className={cn("px-3 py-1.5 text-xs font-medium text-[#6B7280]", className)}>{children}</div>;
 }
 
 function DropdownMenuCheckboxItem({ children, checked, onCheckedChange, className, ...props }: { children: React.ReactNode; checked?: boolean; onCheckedChange?: (v: boolean) => void; className?: string } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
@@ -131,7 +131,7 @@ function DropdownMenuSubContent({ children, className }: { children: React.React
 }
 
 function DropdownMenuShortcut({ className, children }: { className?: string; children: React.ReactNode }) {
-  return <span className={cn("ml-auto text-xs text-gray-500", className)}>{children}</span>;
+  return <span className={cn("ml-auto text-xs text-[#6B7280]", className)}>{children}</span>;
 }
 
 export {

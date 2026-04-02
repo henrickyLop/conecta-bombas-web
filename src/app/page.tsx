@@ -75,7 +75,7 @@ export default function LandingPage() {
           <h2 className="text-3xl font-bold text-[#1A1A2E] text-center mb-4">
             Por que usar o Conecta Bombas?
           </h2>
-          <p className="text-lg text-gray-500 text-center mb-14 max-w-2xl mx-auto">
+          <p className="text-lg text-[#6B7280] text-center mb-14 max-w-2xl mx-auto">
             Simplificamos o processo de contratação de bombeamento de concreto
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -109,7 +109,7 @@ export default function LandingPage() {
                   {f.icon}
                 </div>
                 <h3 className="text-lg font-semibold text-[#1A1A2E] mb-2">{f.title}</h3>
-                <p className="text-gray-500">{f.desc}</p>
+                <p className="text-[#6B7280]">{f.desc}</p>
               </div>
             ))}
           </div>
@@ -131,7 +131,7 @@ export default function LandingPage() {
               <div key={i} className="text-center">
                 <div className="text-5xl font-bold text-[#FF6B00]/20 mb-3">{s.step}</div>
                 <h3 className="text-xl font-bold text-[#1A1A2E] mb-2">{s.title}</h3>
-                <p className="text-gray-500">{s.desc}</p>
+                <p className="text-[#6B7280]">{s.desc}</p>
               </div>
             ))}
           </div>
