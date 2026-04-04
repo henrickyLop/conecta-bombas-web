@@ -15,24 +15,29 @@ export default function DonoHistoricoPage() {
   const [historico, setHistorico] = useState<Solicitacao[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Solicitacao | null>(null);
+  const [page, setPage] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
+  const PAGE_SIZE = 20;
 
   useEffect(() => {
     if (!usuario) return;
     loadHistorico();
-  }, [usuario]);
+  }, [usuario, page]);
 
   async function loadHistorico() {
     if (!usuario?.id) return;
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data, error, count } = await supabase
         .from('solicitacoes')
-        .select('*')
+        .select('*', { count: 'exact' })
         .eq('uid_dono_bomba', usuario.id)
-        .in('status', ['finalizado', 'cancelado'])
-        .order('criado_em', { ascending: false });
+        .in('status', ['finalizado', 'aguardando_confirmacao', 'cancelado'])
+        .order('criado_em', { ascending: false })
+        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
       if (error) throw error;
       setHistorico(data as Solicitacao[] || []);
+      setTotalCount(count ?? 0);
     } catch (e) {
       console.error(e);
     } finally {
@@ -49,8 +54,13 @@ export default function DonoHistoricoPage() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-[#1A1A2E]">Histórico</h1>
+        <h1 className="text-3xl font-bold text-[#1A1A2E]">Histórico de Serviços</h1>
         <p className="text-[#6B7280] mt-1">Solicitações já respondidas</p>
+        {!loading && totalCount > 0 && (
+          <p className="text-sm text-[#9CA3AF] mt-2">
+            Mostrando {page * PAGE_SIZE + 1}-{Math.min((page + 1) * PAGE_SIZE, totalCount)} de {totalCount} registros
+          </p>
+        )}
       </div>
 
       {loading ? (
@@ -144,6 +154,27 @@ export default function DonoHistoricoPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Pagination */}
+      {!loading && totalCount > PAGE_SIZE && (
+        <div className="flex items-center justify-between mt-6">
+          <button
+            onClick={() => setPage(p => Math.max(0, p - 1))}
+            disabled={page === 0}
+            className="px-4 py-2 text-sm font-medium rounded-lg border border-gray-200 bg-white text-[#1A1A2E] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50"
+          >
+            ← Anterior
+          </button>
+          <span className="text-sm text-[#6B7280]">Página {page + 1} de {Math.ceil(totalCount / PAGE_SIZE)}</span>
+          <button
+            onClick={() => setPage(p => Math.min(Math.ceil(totalCount / PAGE_SIZE) - 1, p + 1))}
+            disabled={(page + 1) * PAGE_SIZE >= totalCount}
+            className="px-4 py-2 text-sm font-medium rounded-lg border border-gray-200 bg-white text-[#1A1A2E] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50"
+          >
+            Próxima →
+          </button>
+        </div>
+      )}
     </div>
   );
 }

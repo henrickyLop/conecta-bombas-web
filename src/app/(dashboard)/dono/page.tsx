@@ -132,7 +132,7 @@ export default function DonoDashboardPage() {
         .from('ordens')
         .select('*')
         .eq('uid_dono_bomba', usuario.id)
-        .in('status', ['finalizado', 'aguardando_confirmacao']);
+        .in('status', ['finalizado']);
 
       const faturamentoTotal = ordensFin?.reduce((s: number, o: any) => s + (Number(o.valor_total) || 0), 0) ?? 0;
       const ticketMedio = ordensFin && ordensFin.length > 0 ? faturamentoTotal / ordensFin.length : 0;
