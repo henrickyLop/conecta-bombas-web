@@ -16,30 +16,41 @@ export function useAuth() {
     let cancelled = false;
 
     async function getSession() {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (cancelled) return;
-      setUser(session?.user ?? null);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (cancelled) return;
+        setUser(session?.user ?? null);
 
-      if (session?.user) {
-        // Don't set loading=false here — wait for fetchUsuario
-        await fetchUsuario(session.user.email ?? '');
-      } else {
-        setUsuario(null);
+        if (session?.user) {
+          await fetchUsuario(session.user.email ?? '');
+        } else {
+          setUsuario(null);
+        }
+      } catch (e) {
+        console.error('getSession error:', e);
+        if (!cancelled) {
+          setUser(null);
+          setUsuario(null);
+        }
       }
       if (!cancelled) setLoading(false);
     }
     getSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (cancelled) return;
-      setUser(session?.user ?? null);
+      try {
+        if (cancelled) return;
+        setUser(session?.user ?? null);
 
-      if (!session?.user) {
-        setUsuario(null);
-        setLoading(false);
-      } else {
-        await fetchUsuario(session.user.email ?? '');
-        if (!cancelled) setLoading(false);
+        if (!session?.user) {
+          setUsuario(null);
+          setLoading(false);
+        } else {
+          await fetchUsuario(session.user.email ?? '');
+          if (!cancelled) setLoading(false);
+        }
+      } catch (e) {
+        console.error('onAuthStateChange error:', e);
       }
     });
 
@@ -47,14 +58,19 @@ export function useAuth() {
   }, []);
 
   const fetchUsuario = async (email: string) => {
-    const { data } = await supabase
-      .from('usuarios')
-      .select('*')
-      .eq('email', email)
-      .single();
-    // Return the promise so callers can await if needed
-    setUsuario(data as Usuario | null);
-    return data as Usuario | null;
+    try {
+      const { data } = await supabase
+        .from('usuarios')
+        .select('*')
+        .eq('email', email)
+        .maybeSingle();
+      setUsuario(data as Usuario | null);
+      return data as Usuario | null;
+    } catch (e) {
+      console.error('fetchUsuario error:', e);
+      setUsuario(null);
+      return null;
+    }
   };
 
   const refreshUsuario = async () => {

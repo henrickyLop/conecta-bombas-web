@@ -23,8 +23,6 @@ import type { Bomba } from '@/lib/types';
 import { getCityCoords, averageCenter } from '@/lib/city-coords';
 import { CIDADES_BRASIL, getCidadesPorEstado } from '@/lib/cidades-brasil';
 import dynamic from 'next/dynamic';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
 
 // Dynamic imports for Leaflet (SSR is not compatible with leaflet)
 const MapContainer = dynamic(() => import('react-leaflet').then(m => m.MapContainer), { ssr: false });
@@ -32,16 +30,23 @@ const TileLayer = dynamic(() => import('react-leaflet').then(m => m.TileLayer), 
 const Marker = dynamic(() => import('react-leaflet').then(m => m.Marker), { ssr: false });
 const Popup = dynamic(() => import('react-leaflet').then(m => m.Popup), { ssr: false });
 
-// Fix Leaflet default icon issue with Next.js bundler
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-});
-
 export default function ClienteBuscarPage() {
   const { usuario } = useAuth();
+
+  // Fix Leaflet default icons on client only (moved from top-level to avoid SSR crash)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    import('leaflet').then(L => {
+      delete (L.Icon.Default.prototype as any)._getIconUrl;
+      L.Icon.Default.mergeOptions({
+        iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+        iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+        shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+      });
+      import('leaflet/dist/leaflet.css');
+    });
+  }, []);
+
   const [bombas, setBombas] = useState<Bomba[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);

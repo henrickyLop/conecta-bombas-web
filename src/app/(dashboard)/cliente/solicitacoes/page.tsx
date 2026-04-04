@@ -21,6 +21,15 @@ import { toast } from 'sonner';
 
 type DateFilter = 'todos' | 'mes' | '3meses';
 
+function FlagIcon({ size = 16, className, ...props }: { size?: number; className?: string; [key: string]: any }) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: size, height: size }} className={className}>
+      <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
+      <line x1="4" y1="22" x2="4" y2="15" />
+    </svg>
+  );
+}
+
 function normalizeStatus(s: Solicitacao): Solicitacao {
   if (s.status === 'aceita') return { ...s, status: 'agendado' };
   if (s.status === 'recusada') return { ...s, status: 'cancelado' };
@@ -213,9 +222,7 @@ export default function ClienteSolicitacoesPage() {
   function formatPhone(phone: string) {
     if (!phone) return null;
     const digits = phone.replace(/\D/g, '');
-    if (digits.length === 11) return `55${digits}`;
-    if (digits.length === 10) return `55${digits}0`;
-    return phone;
+    return `55${digits}`;
   }
 
   function whatsappLink(phone: string) {
@@ -224,14 +231,7 @@ export default function ClienteSolicitacoesPage() {
     return `https://wa.me/${formatted}`;
   }
 
-  function FlagIcon(props: any) {
-    return (
-      <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
-        <line x1="4" y1="22" x2="4" y2="15" />
-      </svg>
-    );
-  }
+  
 
   return (
     <div>
@@ -555,6 +555,7 @@ export default function ClienteSolicitacoesPage() {
 
       {/* Repeat Order Dialog */}
       <Dialog open={repetirDialogOpen} onOpenChange={setRepetirDialogOpen}>
+        <div className="max-h-[85vh] overflow-y-auto p-1">
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="text-[#1A1A2E] flex items-center gap-2">

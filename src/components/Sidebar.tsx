@@ -54,10 +54,6 @@ export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  if (!usuario) return null;
-
-  const menu = menuMap[usuario.tipo] || [];
-
   // Mobile online/offline indicator
   const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
   useEffect(() => {
@@ -70,6 +66,10 @@ export default function Sidebar() {
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
+
+  if (!usuario) return null;
+
+  const menu = menuMap[usuario.tipo] || [];
 
   const sidebarContent = (
     <div className="flex h-full flex-col bg-[#0F172A] text-white w-full">

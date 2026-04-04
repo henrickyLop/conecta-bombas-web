@@ -293,6 +293,7 @@ export default function PerfilPage() {
 
       {/* Edit Bio Dialog */}
       <Dialog open={bioDialogOpen} onOpenChange={setBioDialogOpen}>
+        <div className="max-h-[85vh] overflow-y-auto p-1">
         <DialogHeader>
           <DialogTitle>Editar Bio</DialogTitle>
           <DialogDescription>
@@ -320,6 +321,7 @@ export default function PerfilPage() {
             {savingBio ? 'Salvando...' : 'Salvar'}
           </Button>
         </DialogFooter>
+        </div>
       </Dialog>
     </div>
   );

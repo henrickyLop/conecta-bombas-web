@@ -37,7 +37,7 @@ export default function LoginPage() {
           .from('usuarios')
           .select('*')
           .eq('email', email)
-          .single();
+          .maybeSingle();
 
         if (usuario) {
           switch (usuario.status) {

@@ -189,7 +189,7 @@ export default function DonoDashboardPage() {
   function formatPhone(phone: string) {
     if (!phone) return null;
     const d = phone.replace(/\D/g, '');
-    return d.length === 11 ? `55${d}` : d.length === 10 ? `55${d}0` : phone;
+    return `55${d}`;
   }
 
   const pendentes = todas.filter(s => s.status === 'pendente');
