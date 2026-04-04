@@ -157,7 +157,7 @@ export default function AdminPage() {
     <div>
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-[#1A1A2E]">Painel Administrativo</h1>
-        <p className="text-[#6B7280] mt-1">Visão geral do sistema · {usuario.nome}</p>
+        <p className="text-[#6B7280] mt-1">Visão geral do sistema · {usuario.nome ?? ''}</p>
       </div>
 
       {/* Alert: pendentes > 7 dias */}

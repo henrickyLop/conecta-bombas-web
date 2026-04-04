@@ -37,20 +37,24 @@ type UsuarioExtended = {
 };
 
 export default function PerfilPage() {
-  const { usuario, refreshUsuario } = useAuth();
+  const { usuario, refreshUsuario, loading: authLoading } = useAuth();
   const [userData, setUserData] = useState<UsuarioExtended>({});
   const [bioDialogOpen, setBioDialogOpen] = useState(false);
   const [bioText, setBioText] = useState('');
   const [savingBio, setSavingBio] = useState(false);
   const [bombas, setBombas] = useState<any[]>([]);
   const [loadingBombas, setLoadingBombas] = useState(false);
+  const [fetchError, setFetchError] = useState(false);
 
   // Load user bio from Supabase on mount
   useEffect(() => {
     if (usuario) {
       loadUserData();
+    } else if (!authLoading) {
+      // Auth done but no usuario record — force refresh
+      setFetchError(true);
     }
-  }, [usuario]);
+  }, [usuario, authLoading]);
 
   const loadUserData = async () => {
     if (!usuario?.id) return;
@@ -67,7 +71,7 @@ export default function PerfilPage() {
     }
 
     // Load bombas for dono_bomba
-    if (usuario.tipo === 'dono_bomba') {
+    if ((usuario.tipo ?? 'cliente') === 'dono_bomba') {
       setLoadingBombas(true);
       const { data: bombasData } = await supabase
         .from('bombas')
@@ -94,7 +98,27 @@ export default function PerfilPage() {
     setBioDialogOpen(false);
   };
 
-  if (!usuario) return null;
+  // Show loading/error instead of blank screen
+  if (!usuario) {
+    if (fetchError) {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-[300px] text-center">
+          <p className="text-lg text-[#6B7280]">Não foi possível carregar seu perfil.</p>
+          <button
+            className="mt-4 px-4 py-2 bg-[#FF6B00] text-white rounded-lg"
+            onClick={() => { setFetchError(false); window.location.reload(); }}
+          >
+            Tentar novamente
+          </button>
+        </div>
+      );
+    }
+    return (
+      <div className="flex items-center justify-center min-h-[300px]">
+        <p className="text-[#6B7280]">Carregando perfil...</p>
+      </div>
+    );
+  }
 
   const safeNome = usuario.nome ?? 'Usuário';
   const safeEmail = usuario.email ?? '';

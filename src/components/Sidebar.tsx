@@ -67,7 +67,8 @@ export default function Sidebar() {
 
   if (!usuario) return null;
 
-  const menu = menuMap[usuario.tipo] || menuMap[usuario.tipo === 'dono_bomba' ? 'dono' : ''] || [];
+  const tipo = usuario.tipo ?? 'cliente';
+  const menu = menuMap[tipo] || menuMap.dono || [];
 
   const sidebarContent = (
     <div className="flex h-full flex-col bg-[#0F172A] text-white w-full">
