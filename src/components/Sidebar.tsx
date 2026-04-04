@@ -39,11 +39,9 @@ const menuMap: Record<string, { icon: React.ReactNode; label: string; href: stri
     { icon: <User size={20} />, label: 'Meu Perfil', href: '/perfil' },
   ],
   dono: [
-    { icon: <LayoutDashboard size={20} />, label: 'Aguardando', href: '/dono#pendentes' },
-    { icon: <ClipboardList size={20} />, label: 'Agendadas', href: '/dono#agendadas' },
-    { icon: <CheckCircle size={20} />, label: 'Finalizadas', href: '/dono#finalizadas' },
-    { icon: <Ban size={20} />, label: 'Canceladas', href: '/dono#canceladas' },
-    { icon: <ClipboardList size={20} />, label: 'Histórico', href: '/dono/historico' },
+    { icon: <LayoutDashboard size={20} />, label: 'Dashboard', href: '/dono' },
+    { icon: <Truck size={20} />, label: 'Minhas Bombas', href: '/dono/bombas' },
+    { icon: <ClipboardList size={20} />, label: 'Histórico de Serviços', href: '/dono/historico' },
     { icon: <User size={20} />, label: 'Meu Perfil', href: '/perfil' },
   ],
 };

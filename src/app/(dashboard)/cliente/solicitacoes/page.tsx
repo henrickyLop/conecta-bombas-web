@@ -14,7 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import {
   ClipboardList, Phone, MessageSquare, Calendar, Clock, Volume2, Search,
   FileText, TrendingUp, CalendarDays, BarChart3, CheckCircle2, AlertCircle,
-  MapPin, Star, RefreshCw, Save, Loader2
+  MapPin, Star, RefreshCw, Save, Loader2, Flag
 } from 'lucide-react';
 import type { Solicitacao } from '@/lib/types';
 import { toast } from 'sonner';
@@ -52,6 +52,12 @@ export default function ClienteSolicitacoesPage() {
   const [repObservacoes, setRepObservacoes] = useState('');
   const [repSubmitting, setRepSubmitting] = useState(false);
   const [modelos, setModelos] = useState<Array<{ uid_dono_bomba: string; nome_dono_bomba: string }>>([]);
+  // Reportar problema
+  const [reportDialogOpen, setReportDialogOpen] = useState(false);
+  const [reportSolicitacao, setReportSolicitacao] = useState<Solicitacao | null>(null);
+  const [reportMotivo, setReportMotivo] = useState('');
+  const [reportSubmitting, setReportSubmitting] = useState(false);
+  const today = new Date().toISOString().split('T')[0];
 
   useEffect(() => {
     if (!usuario) return;
@@ -127,7 +133,11 @@ export default function ClienteSolicitacoesPage() {
         data_servico: repDataServico,
         hora_servico: repHoraServico,
         observacoes: repObservacoes,
-        status: 'pendente',
+        endereco_obra: repetirSolicitacao.endereco_obra || '',
+        cidade_obra: repetirSolicitacao.cidade_obra || '',
+        estado_obra: repetirSolicitacao.estado_obra || '',
+        obs_obra: repetirSolicitacao.obs_obra || '',
+        status: 'aguardando_confirmacao',
       });
       if (error) throw error;
       toast.success('Solicitação repetida enviada! 🔄');
@@ -138,6 +148,58 @@ export default function ClienteSolicitacoesPage() {
       toast.error(e.message || 'Erro ao enviar solicitação');
     } finally {
       setRepSubmitting(false);
+    }
+  }
+
+  async function confirmarServico(s: Solicitacao) {
+    try {
+      const { error } = await supabase
+        .from('solicitacoes')
+        .update({ status: 'finalizado' })
+        .eq('id', s.id);
+      if (error) throw error;
+      toast.success('Serviço confirmado! ✅');
+      setSelected(null);
+      loadSolicitacoes();
+    } catch (e: any) {
+      toast.error(e.message || 'Erro ao confirmar serviço');
+    }
+  }
+
+  function abrirReportar(s: Solicitacao) {
+    setReportSolicitacao(s);
+    setReportMotivo('');
+    setReportDialogOpen(true);
+  }
+
+  async function enviarReportar() {
+    if (!reportSolicitacao || !reportMotivo.trim()) {
+      toast.error('Descreva o problema');
+      return;
+    }
+    setReportSubmitting(true);
+    try {
+      const observacoesAtuais = reportSolicitacao.observacoes || '';
+      const observacoesAtualizadas = observacoesAtuais
+        ? `${observacoesAtuais}\n\n🚨 PROBLEMA REPORTADO: ${reportMotivo}`
+        : `🚨 PROBLEMA REPORTADO: ${reportMotivo}`;
+
+      const { error } = await supabase
+        .from('solicitacoes')
+        .update({
+          observacoes: observacoesAtualizadas,
+          reportado: true,
+        })
+        .eq('id', reportSolicitacao.id);
+      if (error) throw error;
+      toast.success('Problema reportado. O administrador será notificado.');
+      setReportDialogOpen(false);
+      setReportSolicitacao(null);
+      loadSolicitacoes();
+    } catch (e: any) {
+      toast.error(e.message || 'Erro ao reportar problema');
+    } finally {
+      setReportSubmitting(false);
     }
   }
 
@@ -172,7 +234,7 @@ export default function ClienteSolicitacoesPage() {
     const total = filtered.length;
     const volumeTotal = filtered.reduce((sum, s) => sum + (s.volume || 0), 0);
     const finalizadas = filtered.filter(s => s.status === 'finalizado').length;
-    const pendentes = filtered.filter(s => s.status === 'pendente').length;
+    const pendentes = filtered.filter(s => s.status === 'pendente' || s.status === 'aguardando_confirmacao').length;
 
     // Últimos X dias
     const now = new Date();
@@ -188,22 +250,24 @@ export default function ClienteSolicitacoesPage() {
     return { total, volumeTotal, finalizadas, pendentes, last7, last30 };
   }, [filtered]);
 
-  function statusBadge(status: Solicitacao['status']) {
+  function statusBadge(status: string) {
     const map: Record<string, { text: string; cls: string; icon: string }> = {
       agendado: { text: 'Agendada', cls: 'bg-blue-100 text-blue-700', icon: '📅' },
       finalizado: { text: 'Finalizada', cls: 'bg-green-100 text-green-700', icon: '✅' },
       cancelado: { text: 'Cancelada', cls: 'bg-red-100 text-red-700', icon: '❌' },
       pendente: { text: 'Aguardando', cls: 'bg-amber-100 text-amber-700', icon: '⏳' },
+      aguardando_confirmacao: { text: 'Aguardando Confirmação', cls: 'bg-purple-100 text-purple-700', icon: '🤝' },
     };
     const s = map[status] || map.agendado;
     return <Badge className={`${s.cls} px-3 py-1`}>{s.icon} {s.text}</Badge>;
   }
 
-  function statusTimeline(status: Solicitacao['status']) {
+  function statusTimeline(status: string) {
     const steps = [
       { label: 'Pedido', icon: ClipboardList, done: true, color: 'bg-blue-500' },
-      { label: 'Aguardando', icon: Clock, done: ['agendado', 'finalizado'].includes(status), color: 'bg-amber-500' },
-      { label: 'Aceito', icon: CheckCircle2, done: status === 'agendado' || status === 'finalizado', color: 'bg-orange-500' },
+      { label: 'Aguardando', icon: Clock, done: ['agendado', 'aguardando_confirmacao', 'finalizado'].includes(status), color: 'bg-amber-500' },
+      { label: 'Aceito', icon: CheckCircle2, done: status === 'agendado' || status === 'aguardando_confirmacao' || status === 'finalizado', color: 'bg-orange-500' },
+      { label: 'Confirmação', icon: Flag, done: status === 'aguardando_confirmacao' || status === 'finalizado', color: 'bg-purple-500' },
       { label: 'Finalizado', icon: FlagIcon, done: status === 'finalizado', color: 'bg-green-500' },
     ];
 
@@ -230,8 +294,6 @@ export default function ClienteSolicitacoesPage() {
     if (!formatted) return '#';
     return `https://wa.me/${formatted}`;
   }
-
-  
 
   return (
     <div>
@@ -363,6 +425,12 @@ export default function ClienteSolicitacoesPage() {
                         <span>{s.volume}m³</span>
                         <span>·</span>
                         <span>{s.data_servico}</span>
+                        {s.cidade_obra && (
+                          <>
+                            <span>·</span>
+                            <span className="flex items-center gap-1"><MapPin size={10} /> {s.cidade_obra}/{s.estado_obra}</span>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -433,7 +501,7 @@ export default function ClienteSolicitacoesPage() {
 
       {/* Detail dialog with timeline */}
       <Dialog open={!!selected} onOpenChange={() => setSelected(null)}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           {selected && (
             <>
               <DialogHeader>
@@ -512,10 +580,64 @@ export default function ClienteSolicitacoesPage() {
                 </div>
               </div>
 
-              {selected.observacoes ? (
+              {/* Endereço da obra */}
+              {selected.cidade_obra && (
+                <div className="bg-blue-50 rounded-xl p-4">
+                  <p className="text-xs font-medium text-[#6B7280] mb-2 flex items-center gap-1">
+                    <MapPin size={12} /> Endereço da Obra
+                  </p>
+                  <div className="text-sm">
+                    <p className="font-medium text-[#1A1A2E]">
+                      {selected.endereco_obra || '—'}
+                    </p>
+                    <p className="text-[#4B5563]">
+                      {selected.cidade_obra}/{selected.estado_obra}
+                    </p>
+                    {selected.obs_obra && (
+                      <p className="text-[#6B7280] mt-1 italic">{selected.obs_obra}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Confirmação Bilateral - quando status === aguardando_confirmacao */}
+              {selected.status === 'aguardando_confirmacao' && (
+                <div className="space-y-3">
+                  <div className="bg-purple-50 rounded-xl p-4 border border-purple-200">
+                    <p className="text-sm font-medium text-purple-800 flex items-center gap-2">
+                      <Flag size={16} /> Confirmação Bilateral
+                    </p>
+                    <p className="text-xs text-purple-600 mt-1">
+                      Confirme que o serviço foi realizado conforme combinado
+                    </p>
+                  </div>
+                  <div className="flex gap-3">
+                    <Button
+                      onClick={() => confirmarServico(selected)}
+                      className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      <CheckCircle2 size={18} className="mr-2" />
+                      Confirmar Serviço
+                    </Button>
+                    <Button
+                      onClick={() => abrirReportar(selected)}
+                      variant="destructive"
+                      className="flex-1"
+                    >
+                      <AlertCircle size={18} className="mr-2" />
+                      Reportar Problema
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {(selected.observacoes || selected.reportado) ? (
                 <div>
                   <span className="text-[#6B7280]">Observações:</span>
-                  <p className="text-[#1A1A2E] mt-1">{selected.observacoes}</p>
+                  <p className="text-[#1A1A2E] mt-1 whitespace-pre-wrap">{selected.observacoes}</p>
+                  {selected.reportado && (
+                    <Badge className="bg-red-100 text-red-700 mt-2">⚠️ Problema Reportado</Badge>
+                  )}
                 </div>
               ) : (
                 <div className="text-[#9CA3AF] text-sm italic">Sem observações registradas</div>
@@ -596,6 +718,7 @@ export default function ClienteSolicitacoesPage() {
                     type="date"
                     value={repDataServico}
                     onChange={e => setRepDataServico(e.target.value)}
+                    min={today}
                     className="mt-1 text-[#1A1A2E]"
                     required
                   />
@@ -636,6 +759,48 @@ export default function ClienteSolicitacoesPage() {
           )}
         </DialogContent>
         </div>
+      </Dialog>
+
+      {/* Reportar Problema Dialog */}
+      <Dialog open={reportDialogOpen} onOpenChange={setReportDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-[#1A1A2E] flex items-center gap-2">
+              <AlertCircle size={20} className="text-red-500" />
+              Reportar Problema
+            </DialogTitle>
+            <DialogDescription>
+              Descreva o problema com o serviço realizado
+            </DialogDescription>
+          </DialogHeader>
+          {reportSolicitacao && (
+            <div className="space-y-4">
+              <div className="bg-red-50 rounded-lg p-3 text-sm">
+                <p className="font-medium text-[#1A1A2E]">{reportSolicitacao.nome_dono_bomba}</p>
+                <p className="text-[#4B5563]">{reportSolicitacao.volume}m³ · {reportSolicitacao.data_servico}</p>
+              </div>
+              <div>
+                <Label htmlFor="report-motivo" className="text-[#1A1A2E]">Descreva o problema *</Label>
+                <Textarea
+                  id="report-motivo"
+                  value={reportMotivo}
+                  onChange={e => setReportMotivo(e.target.value)}
+                  placeholder="O que houve de errado com o serviço?"
+                  className="mt-1 text-[#1A1A2E]"
+                  rows={4}
+                  required
+                />
+              </div>
+              <Button
+                onClick={enviarReportar}
+                disabled={reportSubmitting}
+                className="w-full bg-red-600 hover:bg-red-700 text-white"
+              >
+                {reportSubmitting ? <Loader2 className="animate-spin" size={18} /> : 'Reportar Problema'}
+              </Button>
+            </div>
+          )}
+        </DialogContent>
       </Dialog>
     </div>
   );

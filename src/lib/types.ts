@@ -39,8 +39,15 @@ export type Solicitacao = {
   data_servico: string;
   hora_servico: string;
   observacoes: string;
-  status: 'agendado' | 'finalizado' | 'cancelado' | 'aceita' | 'pendente' | 'recusada';
+  status: 'agendado' | 'finalizado' | 'cancelado' | 'aceita' | 'pendente' | 'recusada' | 'aguardando_confirmacao';
+  // Endereço da obra
+  endereco_obra?: string;
+  cidade_obra?: string;
+  estado_obra?: string;
+  cep_obra?: string;
+  obs_obra?: string;
   criado_em: string;
+  reportado?: boolean;
 };
 
 export type Ordem = {
@@ -57,6 +64,8 @@ export type Ordem = {
   data_servico: string;
   hora_servico: string;
   status: 'agendado' | 'finalizado';
+  valor_unit?: number;
+  valor_total?: number;
   criado_em: string;
 };
 

@@ -18,17 +18,23 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Loader2, Truck, MapPin, Settings, Search, CheckCircle, Heart } from 'lucide-react';
-import { ESTADOS_BR } from '@/lib/types';
 import type { Bomba } from '@/lib/types';
 import { getCityCoords, averageCenter } from '@/lib/city-coords';
+import { ESTADOS_BR } from '@/lib/types';
 import { CIDADES_BRASIL, getCidadesPorEstado } from '@/lib/cidades-brasil';
 import dynamic from 'next/dynamic';
+
+// Types
+type BombaComAvaliacao = Bomba & { avaliacao_media?: number; total_avaliacoes?: number };
 
 // Dynamic imports for Leaflet (SSR is not compatible with leaflet)
 const MapContainer = dynamic(() => import('react-leaflet').then(m => m.MapContainer), { ssr: false });
 const TileLayer = dynamic(() => import('react-leaflet').then(m => m.TileLayer), { ssr: false });
 const Marker = dynamic(() => import('react-leaflet').then(m => m.Marker), { ssr: false });
 const Popup = dynamic(() => import('react-leaflet').then(m => m.Popup), { ssr: false });
+
+// Min date (today) for date inputs
+const today = new Date().toISOString().split('T')[0];
 
 export default function ClienteBuscarPage() {
   const { usuario } = useAuth();
@@ -47,10 +53,10 @@ export default function ClienteBuscarPage() {
     });
   }, []);
 
-  const [bombas, setBombas] = useState<Bomba[]>([]);
+  const [bombas, setBombas] = useState<BombaComAvaliacao[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
-  const [selectedBomba, setSelectedBomba] = useState<Bomba | null>(null);
+  const [selectedBomba, setSelectedBomba] = useState<BombaComAvaliacao | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   // Search - estado primeiro
   const [estado, setEstado] = useState('');
@@ -61,13 +67,43 @@ export default function ClienteBuscarPage() {
   const [horaServico, setHoraServico] = useState('');
   const [observacoes, setObservacoes] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  // Favorites
-  const [favoritos, setFavoritos] = useState<Array<{ uid_dono: string; nome_dono: string; cidade: string; estado: string }>>([]);
+  // Endereço da obra (obrigatório)
+  const [rua, setRua] = useState('');
+  const [numero, setNumero] = useState('');
+  const [bairro, setBairro] = useState('');
+  const [cidadeObra, setCidadeObra] = useState(usuario?.cidade ?? '');
+  const [estadoObra, setEstadoObra] = useState(usuario?.estado ?? '');
+  const [obsObra, setObsObra] = useState('');
+  // Favorites - from database
+  const [favoritos, setFavoritos] = useState<string[]>([]);
 
-  // Cidades do estado selecionado
+  // Cidades do estado selecionado (busca)
   const cidadesDoEstado = useMemo(() => {
     return getCidadesPorEstado(estado);
   }, [estado]);
+
+  // Cidades do estado da obra
+  const cidadesDoEstadoObra = useMemo(() => {
+    return getCidadesPorEstado(estadoObra);
+  }, [estadoObra]);
+
+  // Carregar favoritos do banco ao montar
+  useEffect(() => {
+    if (!usuario) return;
+    async function loadFavoritos() {
+      try {
+        const { data, error } = await supabase
+          .from('favoritos')
+          .select('uid_bomba')
+          .eq('uid_cliente', usuario.id);
+        if (error) throw error;
+        setFavoritos((data || []).map((f: any) => f.uid_bomba));
+      } catch (e) {
+        console.error('Erro ao carregar favoritos:', e);
+      }
+    }
+    loadFavoritos();
+  }, [usuario]);
 
   // Quando seleciona estado novo, limpa cidade
   function handleEstadoChange(uf: string) {
@@ -76,8 +112,8 @@ export default function ClienteBuscarPage() {
   }
 
   async function buscarBombas() {
-    if (!cidade && !estado) {
-      toast.error('Preencha ao menos o estado');
+    if (!estado) {
+      toast.error('Selecione ao menos o estado');
       return;
     }
     setLoading(true);
@@ -85,13 +121,28 @@ export default function ClienteBuscarPage() {
     try {
       let query = supabase.from('bombas').select('*').eq('status', 'aprovado');
       // Estado filtra primeiro
-      if (estado) query = query.eq('estado', estado);
-      // Cidade filtra depois
-      if (cidade) query = query.eq('cidade', cidade);
-      const { data, error } = await query.order('criado_em', { ascending: false });
-      if (error) throw error;
-      setBombas(data as Bomba[] || []);
-      setSearched(true);
+      query = query.eq('estado', estado);
+      // Cidade filtra (cidade base OU cidades_atendidas)
+      if (cidade) {
+        // Busca por cidade base OU array cidades_atendidas
+        const { data, error } = await query;
+        if (error) throw error;
+        // Filtrar por cidade OU cidades_atendidas
+        const allBombas = data as Bomba[] || [];
+        const bombasFiltradas = allBombas.filter(b =>
+          b.cidade === cidade ||
+          (Array.isArray(b.cidades_atendidas) &&
+            b.cidades_atendidas.some((ca: string) => {
+              const formattedCity = typeof ca === 'string' ? ca.trim() : '';
+              return formattedCity === cidade || formattedCity === `${cidade}/${estado}`;
+            }))
+        );
+        await fetchAvaliacoes(bombasFiltradas);
+      } else {
+        const { data, error } = await query.order('criado_em', { ascending: false });
+        if (error) throw error;
+        await fetchAvaliacoes((data as Bomba[]) || []);
+      }
     } catch (e: any) {
       toast.error(e.message || 'Erro ao buscar bombas');
     } finally {
@@ -99,7 +150,37 @@ export default function ClienteBuscarPage() {
     }
   }
 
-  function openSolicitacao(bomba: Bomba) {
+  async function fetchAvaliacoes(dataBombas: Bomba[]) {
+    const donosUids = [...new Set(dataBombas.map(b => b.uid_dono))];
+    let ratingsMap: Record<string, { avg: number; total: number }> = {};
+    if (donosUids.length > 0) {
+      const { data: ratings } = await supabase
+        .from('avaliacoes')
+        .select('uid_avaliado, nota')
+        .in('uid_avaliado', donosUids);
+      const grouped: Record<string, number[]> = {};
+      (ratings || []).forEach((r: any) => {
+        if (!grouped[r.uid_avaliado]) grouped[r.uid_avaliado] = [];
+        grouped[r.uid_avaliado].push(r.nota);
+      });
+      for (const uid of donosUids) {
+        const notas = grouped[uid] || [];
+        ratingsMap[uid] = {
+          avg: notas.length > 0 ? parseFloat((notas.reduce((a, b) => a + b, 0) / notas.length).toFixed(1)) : 0,
+          total: notas.length,
+        };
+      }
+    }
+    const bombasComAvaliacao: BombaComAvaliacao[] = dataBombas.map(b => ({
+      ...b,
+      avaliacao_media: ratingsMap[b.uid_dono]?.avg,
+      total_avaliacoes: ratingsMap[b.uid_dono]?.total,
+    }));
+    setBombas(bombasComAvaliacao);
+    setSearched(true);
+  }
+
+  function openSolicitacao(bomba: BombaComAvaliacao) {
     if (!usuario) return;
     if (bomba.uid_dono === usuario.id) {
       toast.error('Você não pode solicitar para sua própria bomba');
@@ -107,34 +188,64 @@ export default function ClienteBuscarPage() {
     }
     setSelectedBomba(bomba);
     setDialogOpen(true);
+    // Reset form
+    setVolume('');
+    setDataServico('');
+    setHoraServico('');
+    setObservacoes('');
+    setRua('');
+    setNumero('');
+    setBairro('');
+    setCidadeObra(usuario?.cidade ?? '');
+    setEstadoObra(usuario?.estado ?? '');
+    setObsObra('');
   }
 
-  // Favorites helpers
-  useEffect(() => {
+  async function toggleFavorito(bomba: BombaComAvaliacao) {
+    if (!usuario) return;
+    const exists = favoritos.includes(bomba.id);
     try {
-      const stored = localStorage.getItem('conecta_favoritos');
-      if (stored) setFavoritos(JSON.parse(stored));
-    } catch {}
-  }, []);
-
-  function toggleFavorito(bomba: Bomba) {
-    setFavoritos(prev => {
-      const exists = prev.find(f => f.uid_dono === bomba.uid_dono);
-      let next: typeof prev;
       if (exists) {
-        next = prev.filter(f => f.uid_dono !== bomba.uid_dono);
+        const { error } = await supabase
+          .from('favoritos')
+          .delete()
+          .eq('uid_cliente', usuario.id)
+          .eq('uid_bomba', bomba.id);
+        if (error) throw error;
+        setFavoritos(prev => prev.filter(id => id !== bomba.id));
         toast.info(`${bomba.nome_dono} removido dos favoritos`);
       } else {
-        next = [...prev, { uid_dono: bomba.uid_dono, nome_dono: bomba.nome_dono, cidade: bomba.cidade, estado: bomba.estado }];
+        const { error } = await supabase
+          .from('favoritos')
+          .insert({
+            uid_cliente: usuario.id,
+            uid_bomba: bomba.id,
+          });
+        if (error) throw error;
+        setFavoritos(prev => [...prev, bomba.id]);
         toast.success(`${bomba.nome_dono} adicionado aos favoritos ❤️`);
       }
-      localStorage.setItem('conecta_favoritos', JSON.stringify(next));
-      return next;
-    });
+    } catch (e: any) {
+      toast.error(e.message || 'Erro ao atualizar favoritos');
+    }
   }
 
-  function isFavorito(uid_dono: string) {
-    return favoritos.some(f => f.uid_dono === uid_dono);
+  function isFavorito(uid_bomba: string) {
+    return favoritos.includes(uid_bomba);
+  }
+
+  // Render estrelas baseado na nota
+  function renderEstrelas(nota: number) {
+    const filled = Math.round(nota);
+    const stars = [];
+    for (let i = 0; i < 5; i++) {
+      stars.push(
+        <span key={i} className={i < filled ? 'text-yellow-400' : 'text-gray-300'}>
+          ★
+        </span>
+      );
+    }
+    return stars;
   }
 
   async function enviarSolicitacao() {
@@ -142,7 +253,14 @@ export default function ClienteBuscarPage() {
       toast.error('Preencha todos os campos obrigatórios');
       return;
     }
+    // Validação do endereço da obra
+    if (!rua || !numero || !bairro || !cidadeObra || !estadoObra) {
+      toast.error('Preencha todos os campos do endereço da obra');
+      return;
+    }
+
     setSubmitting(true);
+    const enderecoCompleto = `${rua}, ${numero} - ${bairro}`;
     try {
       const { error } = await supabase.from('solicitacoes').insert({
         uid_cliente: usuario.id,
@@ -157,16 +275,24 @@ export default function ClienteBuscarPage() {
         data_servico: dataServico,
         hora_servico: horaServico,
         observacoes,
-        status: 'pendente',
+        endereco_obra: enderecoCompleto,
+        cidade_obra: cidadeObra,
+        estado_obra: estadoObra,
+        obs_obra: obsObra || '',
+        status: 'aguardando_confirmacao',
       });
       if (error) throw error;
-      toast.success('Solicitação enviada! Aguarde resposta do dono.');
+      toast.success('Solicitação enviada! Aguarde a confirmação bilateral.');
       setDialogOpen(false);
       setSelectedBomba(null);
       setVolume('');
       setDataServico('');
       setHoraServico('');
       setObservacoes('');
+      setRua('');
+      setNumero('');
+      setBairro('');
+      setObsObra('');
     } catch (e: any) {
       toast.error(e.message || 'Erro ao enviar solicitação');
     } finally {
@@ -288,9 +414,9 @@ export default function ClienteBuscarPage() {
                       <button
                         onClick={(e) => { e.stopPropagation(); toggleFavorito(b); }}
                         className="p-1 hover:bg-gray-100 rounded-full transition-colors"
-                        title={isFavorito(b.uid_dono) ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+                        title={isFavorito(b.id) ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
                       >
-                        {isFavorito(b.uid_dono) ? (
+                        {isFavorito(b.id) ? (
                           <Heart size={20} className="text-red-500 fill-red-500" />
                         ) : (
                           <Heart size={20} className="text-gray-400" />
@@ -299,6 +425,18 @@ export default function ClienteBuscarPage() {
                     </div>
                   </div>
                   <h3 className="font-semibold text-[#1A1A2E]">{b.nome_dono}</h3>
+                  
+                  {/* Avaliação */}
+                  {b.avaliacao_media && b.avaliacao_media > 0 ? (
+                    <div className="flex items-center gap-1 mt-2 text-sm">
+                      <span className="flex">{renderEstrelas(b.avaliacao_media)}</span>
+                      <span className="font-semibold text-yellow-500">{b.avaliacao_media}</span>
+                      <span className="text-[#6B7280]">({b.total_avaliacoes} avaliação{b.total_avaliacoes !== 1 ? 'ões' : ''})</span>
+                    </div>
+                  ) : (
+                    <div className="mt-2 text-sm text-[#9CA3AF]">Sem avaliações</div>
+                  )}
+                  
                   <div className="space-y-2 mt-3 text-sm text-[#4B5563]">
                     <div className="flex items-center gap-2">
                       <MapPin size={14} />
@@ -383,7 +521,7 @@ export default function ClienteBuscarPage() {
 
       {/* Solicitation Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-[#1A1A2E]">
               Solicitar Bomba — {selectedBomba?.nome_dono}
@@ -421,6 +559,7 @@ export default function ClienteBuscarPage() {
                     type="date"
                     value={dataServico}
                     onChange={e => setDataServico(e.target.value)}
+                    min={today}
                     className="mt-1 text-[#1A1A2E]"
                     required
                   />
@@ -438,15 +577,119 @@ export default function ClienteBuscarPage() {
                 </div>
               </div>
 
+              {/* Endereço da obra - SEÇÃO OBRIGATÓRIA */}
+              <div className="border-t border-gray-200 pt-4 mt-4">
+                <h4 className="font-semibold text-[#1A1A2E] mb-3 flex items-center gap-2">
+                  <MapPin size={16} className="text-[#FF6B00]" /> Endereço da Obra
+                </h4>
+
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div className="col-span-2">
+                    <Label htmlFor="rua" className="text-[#1A1A2E]">Rua *</Label>
+                    <Input
+                      id="rua"
+                      value={rua}
+                      onChange={e => setRua(e.target.value)}
+                      placeholder="Nome da rua"
+                      className="mt-1 text-[#1A1A2E]"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="numero" className="text-[#1A1A2E]">Número *</Label>
+                    <Input
+                      id="numero"
+                      value={numero}
+                      onChange={e => setNumero(e.target.value)}
+                      placeholder="Nº"
+                      className="mt-1 text-[#1A1A2E]"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="bairro" className="text-[#1A1A2E]">Bairro *</Label>
+                    <Input
+                      id="bairro"
+                      value={bairro}
+                      onChange={e => setBairro(e.target.value)}
+                      placeholder="Bairro"
+                      className="mt-1 text-[#1A1A2E]"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div>
+                    <Label htmlFor="estado-obra" className="text-[#1A1A2E]">Estado *</Label>
+                    <select
+                      id="estado-obra"
+                      value={estadoObra}
+                      onChange={(e) => { setEstadoObra(e.target.value); setCidadeObra(''); }}
+                      className="mt-1.5 w-full h-10 rounded-md border border-input bg-background px-3 text-[#1A1A2E] text-sm"
+                      required
+                    >
+                      <option value="" disabled>UF</option>
+                      {ESTADOS_BR.map((uf) => (
+                        <option key={uf} value={uf}>{uf}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <Label htmlFor="cidade-obra" className="text-[#1A1A2E]">Cidade *</Label>
+                    {estadoObra && cidadesDoEstadoObra.length > 0 ? (
+                      <Input
+                        id="cidade-obra"
+                        list={`cidades-obra-${estadoObra}`}
+                        value={cidadeObra}
+                        onChange={e => setCidadeObra(e.target.value)}
+                        placeholder="Digite a cidade"
+                        className="mt-1 text-[#1A1A2E]"
+                        required
+                      />
+                    ) : (
+                      <Input
+                        id="cidade-obra"
+                        value={cidadeObra}
+                        onChange={e => setCidadeObra(e.target.value)}
+                        placeholder="Selecione o estado"
+                        disabled={!estadoObra}
+                        className="mt-1 text-[#1A1A2E]"
+                        required
+                      />
+                    )}
+                    {estadoObra && cidadesDoEstadoObra.length > 0 && (
+                      <datalist id={`cidades-obra-${estadoObra}`}>
+                        {cidadesDoEstadoObra.map((c) => (
+                          <option key={c} value={c} />
+                        ))}
+                      </datalist>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="obs-obra" className="text-[#1A1A2E]">Observações da Obra (opcional)</Label>
+                  <Textarea
+                    id="obs-obra"
+                    value={obsObra}
+                    onChange={e => setObsObra(e.target.value)}
+                    placeholder="Detalhes do acesso, referências, etc."
+                    className="mt-1 text-[#1A1A2E]"
+                    rows={2}
+                  />
+                </div>
+              </div>
+
               <div>
-                <Label htmlFor="obs" className="text-[#1A1A2E]">Observações (opcional)</Label>
+                <Label htmlFor="obs" className="text-[#1A1A2E]">Observações Gerais (opcional)</Label>
                 <Textarea
                   id="obs"
                   value={observacoes}
                   onChange={e => setObservacoes(e.target.value)}
-                  placeholder="Endereço da obra, detalhes do acesso, etc."
+                  placeholder="Informações adicionais sobre o serviço"
                   className="mt-1 text-[#1A1A2E]"
-                  rows={3}
+                  rows={2}
                 />
               </div>
 

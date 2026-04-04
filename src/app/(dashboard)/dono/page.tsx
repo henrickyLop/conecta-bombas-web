@@ -11,7 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { Loader2, Check, X, Clock, Calendar, User, Phone, MessageSquare, CheckCircle, ClipboardList, Eye, History, Star, TrendingUp, CalendarDays } from 'lucide-react';
+import { Loader2, Check, X, Clock, Calendar, User, Phone, MessageSquare, CheckCircle, ClipboardList, Eye, History, Star, TrendingUp, CalendarDays, MapPin, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Solicitacao } from '@/lib/types';
 
@@ -30,6 +30,7 @@ export default function DonoDashboardPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [selected, setSelected] = useState<Solicitacao | null>(null);
   const [meusNumeros, setMeusNumeros] = useState({ servicosMes: 0, taxaAceitacao: 0, avaliacaoMedia: 0, semanaServicos: [] as { semana: string; total: number; aceitas: number; finalizadas: number }[] });
+  const [financeiro, setFinanceiro] = useState({ faturamentoTotal: 0, ticketMedio: 0, porMes: [] as { mes: string; total: number }[] });
 
   // Read URL hash for tab
   useEffect(() => {
@@ -126,12 +127,37 @@ export default function DonoDashboardPage() {
         });
       }
 
+      // Faturamento
+      const { data: ordensFin } = await supabase
+        .from('ordens')
+        .select('*')
+        .eq('uid_dono_bomba', usuario.id)
+        .in('status', ['finalizado', 'aguardando_confirmacao']);
+
+      const faturamentoTotal = ordensFin?.reduce((s: number, o: any) => s + (Number(o.valor_total) || 0), 0) ?? 0;
+      const ticketMedio = ordensFin && ordensFin.length > 0 ? faturamentoTotal / ordensFin.length : 0;
+
+      const porMesMap: Record<string, number> = {};
+      ordensFin?.forEach((o: any) => {
+        const mes = new Date(o.created_at || o.criado_em).toLocaleString('pt-BR', { month: 'short', year: 'numeric' });
+        porMesMap[mes] = (porMesMap[mes] || 0) + (Number(o.valor_total) || 0);
+      });
+      const porMes = Object.entries(porMesMap).map(([mes, total]) => ({ mes, total }));
+
+      setFinanceiro({ faturamentoTotal, ticketMedio, porMes });
+
       setMeusNumeros({
         servicosMes: mesData?.length ?? 0,
         taxaAceitacao,
         avaliacaoMedia: parseFloat(avgNota.toFixed(1)),
         semanaServicos: semana,
       });
+    } catch (e) {
+      console.error('Erro ao carregar Meus Números:', e);
+    }
+  }
+
+  async function updateStatus(id: string, ns: 'agendado' | 'finalizado' | 'cancelado' | 'aguardando_confirmacao') {
     } catch (e) {
       console.error('Erro ao carregar Meus Números:', e);
     }
@@ -167,12 +193,12 @@ export default function DonoDashboardPage() {
         }
       }
 
-      // When finalizing, update corresponding order status
-      if (ns === 'finalizado') {
+      // When finalizing, update corresponding order status and set to awaiting confirmation
+      if (ns === 'aguardando_confirmacao' || ns === 'finalizado') {
         const sol = todas.find(s => s.id === id);
         if (sol) {
           await supabase.from('ordens')
-            .update({ status: 'finalizado' })
+            .update({ status: ns === 'finalizado' ? 'finalizado' : 'aguardando_confirmacao' })
             .eq('uid_cliente', sol.uid_cliente)
             .eq('uid_dono_bomba', sol.uid_dono_bomba)
             .eq('data_servico', sol.data_servico)
@@ -194,6 +220,7 @@ export default function DonoDashboardPage() {
 
   const pendentes = todas.filter(s => s.status === 'pendente');
   const agendadas = todas.filter(s => s.status === 'agendado');
+  const aguardandoConf = todas.filter(s => s.status === 'aguardando_confirmacao');
   const finalizadas = todas.filter(s => s.status === 'finalizado');
   const canceladas = todas.filter(s => s.status === 'cancelado');
 
@@ -236,6 +263,13 @@ export default function DonoDashboardPage() {
             Aguardando
           </Badge>
         </div>
+        {/* Endereço da obra */}
+        {s.endereco_obra && (
+          <div className="flex items-center gap-1.5 text-[11px] text-[#6B7280]">
+            <MapPin size={12} className="text-[#9CA3AF]" />
+            <span className="line-clamp-1">{s.endereco_obra}{s.cidade_obra ? ` - ${s.cidade_obra}/${s.estado_obra}` : ''}</span>
+          </div>
+        )}
         {/* Action buttons */}
         <div className="flex gap-2 pt-1">
           <Button
@@ -250,6 +284,7 @@ export default function DonoDashboardPage() {
             className="flex-1 h-8 text-xs rounded-lg border-red-200 text-red-600"
             onClick={() => updateStatus(s.id, 'cancelado')}
             disabled={actionLoading}
+            title="Recusar solicitação"
           >
             <X size={14} className="mr-1" /> Recusar
           </Button>
@@ -359,6 +394,48 @@ export default function DonoDashboardPage() {
         </CardContent>
       </Card>
 
+      {/* Financeiro */}
+      <Card className="bg-white border-0 shadow-sm rounded-xl mb-5">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-[#1A1A2E] text-base flex items-center gap-2">
+            <TrendingUp size={18} className="text-green-600" /> 💰 Financeiro
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <div className="bg-green-50 rounded-xl p-3 text-center">
+              <div className="flex items-center justify-center gap-1 mb-1">
+                <ArrowUpRight size={18} className="text-green-600" />
+              </div>
+              <p className="text-[10px] text-[#9CA3AF] uppercase">Faturamento Total</p>
+              <p className="text-lg font-bold text-[#1A1A2E]">{financeiro.faturamentoTotal > 0 ? `R$ ${financeiro.faturamentoTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '—'}</p>
+            </div>
+            <div className="bg-blue-50 rounded-xl p-3 text-center">
+              <div className="flex items-center justify-center gap-1 mb-1">
+                <ArrowDownRight size={18} className="text-blue-600" />
+              </div>
+              <p className="text-[10px] text-[#9CA3AF] uppercase">Ticket Médio</p>
+              <p className="text-lg font-bold text-[#1A1A2E]">{financeiro.ticketMedio > 0 ? `R$ ${financeiro.ticketMedio.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '—'}</p>
+              <p className="text-[9px] text-[#9CA3AF]">por serviço</p>
+            </div>
+          </div>
+          {financeiro.porMes.length > 0 && (
+            <div className="pt-2">
+              <p className="text-xs text-[#9CA3AF] mb-2">Faturamento mensal</p>
+              <ResponsiveContainer width="100%" height={140}>
+                <BarChart data={financeiro.porMes}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                  <XAxis dataKey="mes" tick={{ fontSize: 10, fill: '#9ca3af' }} />
+                  <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} tickFormatter={(v: number) => `R$${v}` } />
+                  <Tooltip contentStyle={{ backgroundColor: '#1a1a2e', border: 'none', borderRadius: 8, color: '#fff', fontSize: 12 }} formatter={(value: number) => [`R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 'Faturamento']} />
+                  <Bar dataKey="total" name="Faturamento" radius={[4, 4, 0, 0]} fill="#22c55e" maxBarSize={32} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Chart */}
       {todas.length > 0 && (
         <Card className="bg-white border-0 shadow-sm rounded-xl mb-5">
@@ -420,9 +497,9 @@ export default function DonoDashboardPage() {
           )}
         </TabsContent>
 
-        {/* AGENDADAS - simple list */}
+        {/* AGENDADAS - simple list (includes aguardando_confirmacao) */}
         <TabsContent value="agendadas">
-          {agendadas.length === 0 ? (
+          {agendadas.length === 0 && aguardandoConf.length === 0 ? (
             <Card className="bg-white border-0 shadow-sm rounded-xl">
               <CardContent className="py-10 text-center">
                 <CheckCircle size={36} className="text-[#9CA3AF] mx-auto mb-3" />
@@ -431,6 +508,29 @@ export default function DonoDashboardPage() {
             </Card>
           ) : (
             <div className="space-y-2">
+              {/* Aguardando confirmação */}
+              {aguardandoConf.map(s => (
+                <div key={s.id} className="bg-white rounded-xl border border-yellow-200 p-3 shadow-sm flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    <div className="w-8 h-8 bg-yellow-50 rounded-lg flex items-center justify-center shrink-0">
+                      <Clock size={16} className="text-yellow-500" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-semibold text-[#1A1A2E] text-sm truncate">{s.nome_cliente}</p>
+                      <p className="text-[11px] text-[#9CA3AF]">{s.volume}m³ · {s.data_servico}</p>
+                      {s.endereco_obra && (
+                        <p className="text-[10px] text-[#6B7280] flex items-center gap-1">
+                          <MapPin size={10} /> {s.endereco_obra}{s.cidade_obra ? ` - ${s.cidade_obra}/${s.estado_obra}` : ''}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <Badge className="bg-yellow-50 text-yellow-700 border border-yellow-200 text-[10px] shrink-0">
+                    <Clock size={9} className="mr-0.5 inline" /> Cliente precisa confirmar
+                  </Badge>
+                </div>
+              ))}
+              {/* Agendadas normais */}
               {agendadas.map(s => (
                 <div key={s.id} className="bg-white rounded-xl border border-gray-100 p-3 shadow-sm flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2.5 min-w-0 flex-1">
@@ -440,12 +540,17 @@ export default function DonoDashboardPage() {
                     <div className="min-w-0">
                       <p className="font-semibold text-[#1A1A2E] text-sm truncate">{s.nome_cliente}</p>
                       <p className="text-[11px] text-[#9CA3AF]">{s.volume}m³ · {s.data_servico}</p>
+                      {s.endereco_obra && (
+                        <p className="text-[10px] text-[#6B7280] flex items-center gap-1">
+                          <MapPin size={10} /> {s.endereco_obra}{s.cidade_obra ? ` - ${s.cidade_obra}/${s.estado_obra}` : ''}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
                     <Badge className="bg-orange-50 text-orange-600 border border-orange-100 text-[10px]">Agendada</Badge>
                     <Button size="sm" className="h-7 text-[10px] bg-green-600 hover:bg-green-700 px-2 rounded-lg"
-                      onClick={() => updateStatus(s.id, 'finalizado')} disabled={actionLoading}>
+                      onClick={() => updateStatus(s.id, 'aguardando_confirmacao')} disabled={actionLoading}>
                       <CheckCircle size={12} className="mr-0.5" /> Finalizar
                     </Button>
                     <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-[#9CA3AF]"
@@ -459,9 +564,9 @@ export default function DonoDashboardPage() {
           )}
         </TabsContent>
 
-        {/* FINALIZADAS - simple list */}
+        {/* FINALIZADAS - includes aguardando_confirmacao */}
         <TabsContent value="finalizadas">
-          {finalizadas.length === 0 ? (
+          {finalizadas.length === 0 && aguardandoConf.length === 0 ? (
             <Card className="bg-white border-0 shadow-sm rounded-xl">
               <CardContent className="py-10 text-center">
                 <History size={36} className="text-[#9CA3AF] mx-auto mb-3" />
@@ -470,6 +575,22 @@ export default function DonoDashboardPage() {
             </Card>
           ) : (
             <div className="space-y-2">
+              {aguardandoConf.map(s => (
+                <div key={s.id} className="bg-white rounded-xl border border-yellow-200 p-3 shadow-sm flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    <div className="w-8 h-8 bg-yellow-50 rounded-lg flex items-center justify-center shrink-0">
+                      <Clock size={16} className="text-yellow-500" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-semibold text-[#1A1A2E] text-sm truncate">{s.nome_cliente}</p>
+                      <p className="text-[11px] text-[#9CA3AF]">{s.volume}m³ · {s.data_servico}</p>
+                    </div>
+                  </div>
+                  <Badge className="bg-yellow-50 text-yellow-700 border border-yellow-200 text-[10px] shrink-0">
+                    <Clock size={9} className="mr-0.5 inline" /> Cliente precisa confirmar
+                  </Badge>
+                </div>
+              ))}
               {finalizadas.map(s => (
                 <div key={s.id} className="bg-white rounded-xl border border-gray-100 p-3 shadow-sm flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2.5 min-w-0 flex-1">
@@ -543,6 +664,12 @@ export default function DonoDashboardPage() {
                   <Calendar size={14} className="text-[#9CA3AF]" />
                   <span className="font-medium text-[#1A1A2E]">{selected.data_servico} às {selected.hora_servico}</span>
                 </div>
+                {selected.endereco_obra && (
+                  <div className="col-span-2 flex items-center gap-2">
+                    <MapPin size={14} className="text-[#9CA3AF]" />
+                    <span className="font-medium text-[#1A1A2E]">{selected.endereco_obra}{selected.cidade_obra ? ` - ${selected.cidade_obra}/${selected.estado_obra}` : ''}</span>
+                  </div>
+                )}
               </div>
               {selected.observacoes ? (
                 <div>
@@ -557,15 +684,20 @@ export default function DonoDashboardPage() {
                   <Button onClick={() => updateStatus(selected.id, 'agendado')} disabled={actionLoading} className="flex-1 bg-green-600 hover:bg-green-700">
                     {actionLoading ? <Loader2 className="animate-spin" size={18} /> : <><Check size={16} className="mr-1" /> Aceitar</>}
                   </Button>
-                  <Button onClick={() => updateStatus(selected.id, 'cancelado')} disabled={actionLoading} variant="destructive" className="flex-1">
+                  <Button onClick={() => updateStatus(selected.id, 'cancelado')} disabled={actionLoading} variant="destructive" className="flex-1" title="Recusar solicitação">
                     <X size={14} className="mr-1" /> Recusar
                   </Button>
                 </div>
               )}
               {selected.status === 'agendado' && (
-                <Button onClick={() => updateStatus(selected.id, 'finalizado')} disabled={actionLoading} className="w-full bg-blue-600 hover:bg-blue-700">
-                  {actionLoading ? <Loader2 className="animate-spin" size={18} /> : <><CheckCircle size={16} className="mr-1" /> Finalizar Serviço</>}
-                </Button>
+                <div className="flex gap-2 pt-2">
+                  <Button onClick={() => updateStatus(selected.id, 'aguardando_confirmacao')} disabled={actionLoading} className="flex-1 bg-green-600 hover:bg-green-700">
+                    {actionLoading ? <Loader2 className="animate-spin" size={18} /> : <><CheckCircle size={16} className="mr-1" /> Finalizar</>}
+                  </Button>
+                  <Button onClick={() => updateStatus(selected.id, 'cancelado')} disabled={actionLoading} variant="destructive" className="flex-1" title="Cancelar Serviço">
+                    <X size={14} className="mr-1" /> Cancelar Serviço
+                  </Button>
+                </div>
               )}
               {selected.telefone_cliente && (
                 <a href={`https://wa.me/${formatPhone(selected.telefone_cliente)}`} target="_blank" rel="noopener noreferrer">

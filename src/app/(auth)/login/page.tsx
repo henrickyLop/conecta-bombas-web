@@ -123,7 +123,12 @@ export default function LoginPage() {
                 )}
               </Button>
             </form>
-            <p className="text-center text-[#6B7280] text-sm mt-6">
+            <div className="text-center mt-4">
+              <Link href="/esqueci-senha" className="text-[#FF6B00] font-semibold text-sm hover:underline">
+                Esqueceu a senha? Recupere aqui
+              </Link>
+            </div>
+            <p className="text-center text-[#6B7280] text-sm mt-4">
               Não tem conta?{' '}
               <Link href="/cadastro" className="text-[#FF6B00] font-semibold hover:underline">
                 Cadastre-se
