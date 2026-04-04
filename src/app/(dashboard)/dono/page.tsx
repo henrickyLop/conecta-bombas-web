@@ -309,7 +309,7 @@ export default function DonoDashboardPage() {
       {/* Header */}
       <div className="mb-5">
         <h1 className="text-xl font-bold text-[#1A1A2E]">Dashboard</h1>
-        <p className="text-[#6B7280] text-sm">Olá, {usuario.nome}</p>
+        <p className="text-[#6B7280] text-sm">Olá, {usuario.nome ?? ''}</p>
       </div>
 
       {/* Stats: 2x2 grid mobile */}

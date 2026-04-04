@@ -122,8 +122,8 @@ export default function ClienteSolicitacoesPage() {
     try {
       const { error } = await supabase.from('solicitacoes').insert({
         uid_cliente: usuario.id,
-        nome_cliente: usuario.nome,
-        telefone_cliente: usuario.telefone || '',
+        nome_cliente: usuario.nome ?? '',
+        telefone_cliente: usuario.telefone ?? '' || '',
         uid_dono_bomba: repetirSolicitacao.uid_dono_bomba,
         nome_dono_bomba: repetirSolicitacao.nome_dono_bomba,
         uid_bomba: repetirSolicitacao.uid_bomba,

@@ -40,7 +40,7 @@ export default function LoginPage() {
           .maybeSingle();
 
         if (usuario) {
-          switch (usuario.status) {
+          switch (usuario.status ?? 'pendente') {
             case 'pendente':
               router.push('/pendente');
               break;
@@ -48,7 +48,7 @@ export default function LoginPage() {
               router.push('/cadastro');
               break;
             default:
-              switch (usuario.tipo) {
+              switch (usuario.tipo ?? 'cliente') {
                 case 'admin':
                   router.push('/admin');
                   break;

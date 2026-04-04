@@ -77,7 +77,7 @@ export default function ClientePage() {
     <div>
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-[#1A1A2E]">Minha Área</h1>
-        <p className="text-[#6B7280] mt-1">Olá, {usuario.nome}</p>
+        <p className="text-[#6B7280] mt-1">Olá, {usuario.nome ?? ''}</p>
       </div>
 
       {/* Stats */}
