@@ -263,6 +263,7 @@ export default function ClienteBuscarPage() {
     }
 
     setSubmitting(true);
+    const uid = usuario.id;
     const enderecoCompleto = `${rua}, ${numero} - ${bairro}`;
     try {
       const { error } = await supabase.from('solicitacoes').insert({

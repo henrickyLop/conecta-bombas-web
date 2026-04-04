@@ -424,7 +424,7 @@ export default function DonoDashboardPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
                   <XAxis dataKey="mes" tick={{ fontSize: 10, fill: '#9ca3af' }} />
                   <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} />
-                  <Tooltip contentStyle={{ backgroundColor: '#1a1a2e', border: 'none', borderRadius: 8, color: '#fff', fontSize: 12 }} formatter={(value: number) => ['R$ ' + value.toLocaleString('pt-BR', { minimumFractionDigits: 2 }), 'Faturamento']} />
+                  <Tooltip contentStyle={{ backgroundColor: '#1a1a2e', border: 'none', borderRadius: 8, color: '#fff', fontSize: 12 }} formatter={(value) => ['R$ ' + Number(value).toLocaleString('pt-BR', { minimumFractionDigits: 2 }), 'Faturamento']} />
                   <Bar dataKey="total" name="Faturamento" radius={[4, 4, 0, 0]} fill="#22c55e" maxBarSize={32} />
                 </BarChart>
               </ResponsiveContainer>
