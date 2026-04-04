@@ -89,13 +89,14 @@ export default function ClienteBuscarPage() {
 
   // Carregar favoritos do banco ao montar
   useEffect(() => {
-    if (!usuario) return;
+    const uid = usuario?.id;
+    if (!uid) return;
     async function loadFavoritos() {
       try {
         const { data, error } = await supabase
           .from('favoritos')
           .select('uid_bomba')
-          .eq('uid_cliente', usuario.id);
+          .eq('uid_cliente', uid);
         if (error) throw error;
         setFavoritos((data || []).map((f: any) => f.uid_bomba));
       } catch (e) {
@@ -181,8 +182,9 @@ export default function ClienteBuscarPage() {
   }
 
   function openSolicitacao(bomba: BombaComAvaliacao) {
-    if (!usuario) return;
-    if (bomba.uid_dono === usuario.id) {
+    const uid = usuario?.id;
+    if (!uid) return;
+    if (bomba.uid_dono === uid) {
       toast.error('Você não pode solicitar para sua própria bomba');
       return;
     }
@@ -202,14 +204,15 @@ export default function ClienteBuscarPage() {
   }
 
   async function toggleFavorito(bomba: BombaComAvaliacao) {
-    if (!usuario) return;
+    const uid = usuario?.id;
+    if (!uid) return;
     const exists = favoritos.includes(bomba.id);
     try {
       if (exists) {
         const { error } = await supabase
           .from('favoritos')
           .delete()
-          .eq('uid_cliente', usuario.id)
+          .eq('uid_cliente', uid)
           .eq('uid_bomba', bomba.id);
         if (error) throw error;
         setFavoritos(prev => prev.filter(id => id !== bomba.id));
@@ -218,7 +221,7 @@ export default function ClienteBuscarPage() {
         const { error } = await supabase
           .from('favoritos')
           .insert({
-            uid_cliente: usuario.id,
+            uid_cliente: uid,
             uid_bomba: bomba.id,
           });
         if (error) throw error;
@@ -263,7 +266,7 @@ export default function ClienteBuscarPage() {
     const enderecoCompleto = `${rua}, ${numero} - ${bairro}`;
     try {
       const { error } = await supabase.from('solicitacoes').insert({
-        uid_cliente: usuario.id,
+        uid_cliente: uid,
         nome_cliente: usuario.nome,
         telefone_cliente: usuario.telefone || '',
         uid_dono_bomba: selectedBomba.uid_dono,
