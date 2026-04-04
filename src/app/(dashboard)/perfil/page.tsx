@@ -96,7 +96,15 @@ export default function PerfilPage() {
 
   if (!usuario) return null;
 
-  const initials = getInitials(usuario.nome);
+  const safeNome = usuario.nome ?? 'Usuário';
+  const safeEmail = usuario.email ?? '';
+  const safeTelefone = usuario.telefone ?? '';
+  const safeCidade = usuario.cidade ?? '';
+  const safeEstado = usuario.estado ?? '';
+  const safeTipo = usuario.tipo ?? 'cliente';
+  const safeCriadoEm = usuario.criado_em ?? new Date().toISOString();
+
+  const initials = getInitials(safeNome);
   const isVerificado = userData.verificado === true;
   const bio = userData.bio || '';
 
@@ -111,18 +119,23 @@ export default function PerfilPage() {
     dono_bomba: 'bg-green-100 text-green-700 border-green-200',
   };
 
-  // Calculate "salvo da plataforma" — time since cadastro
+  // Calculate "tempo na plataforma" — time since cadastro
   const timeOnPlatform = useMemo(() => {
-    const criadoEm = new Date(usuario.criado_em);
-    const now = new Date();
-    const diffMs = now.getTime() - criadoEm.getTime();
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    const diffMonths = Math.floor(diffDays / 30);
-    const diffYears = Math.floor(diffDays / 365);
-    if (diffYears > 0) return `${diffYears} ano${diffYears > 1 ? 's' : ''} no Conecta Bombas`;
-    if (diffMonths > 0) return `${diffMonths} mês${diffMonths > 1 ? 'es' : ''} no Conecta Bombas`;
-    return `${diffDays} dia${diffDays !== 1 ? 's' : ''} no Conecta Bombas`;
-  }, [usuario.criado_em]);
+    try {
+      const criadoEm = new Date(safeCriadoEm);
+      if (isNaN(criadoEm.getTime())) return 'Conecta Bombas';
+      const now = new Date();
+      const diffMs = now.getTime() - criadoEm.getTime();
+      const diffDays = Math.floor(diffMs / (86400000));
+      const diffMonths = Math.floor(diffDays / 30);
+      const diffYears = Math.floor(diffDays / 365);
+      if (diffYears > 0) return `${diffYears} ano${diffYears > 1 ? 's' : ''} no Conecta Bombas`;
+      if (diffMonths > 0) return `${diffMonths} mês${diffMonths > 1 ? 'es' : ''} no Conecta Bombas`;
+      return `${diffDays} dia${diffDays !== 1 ? 's' : ''} no Conecta Bombas`;
+    } catch {
+      return 'Conecta Bombas';
+    }
+  }, [safeCriadoEm]);
 
   const bombaStatusBadge = (status: string) => {
     switch (status) {
@@ -165,7 +178,7 @@ export default function PerfilPage() {
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="text-xl font-semibold text-[#1A1A2E]">{usuario.nome}</h2>
+                <h2 className="text-xl font-semibold text-[#1A1A2E]">{safeNome}</h2>
                 {isVerificado && (
                   <Badge className="bg-green-100 text-green-700 border-green-200 text-xs">
                     <CheckCircle size={12} className="mr-1" />
@@ -176,10 +189,10 @@ export default function PerfilPage() {
               <div className="flex items-center gap-2 mt-1">
                 <Badge
                   variant="outline"
-                  className={`text-xs font-medium ${tipoBadgeColor[usuario.tipo]}`}
+                  className={`text-xs font-medium ${tipoBadgeColor[safeTipo] || tipoBadgeColor.cliente}`}
                 >
                   <Shield size={12} className="mr-1" />
-                  {tipoLabel[usuario.tipo]}
+                  {tipoLabel[safeTipo]}
                 </Badge>
                 <span className="text-xs text-[#6B7280] flex items-center gap-1">
                   <Clock size={12} />
@@ -197,7 +210,7 @@ export default function PerfilPage() {
               </div>
               <div>
                 <p className="text-xs text-[#6B7280]">Email</p>
-                <p className="text-sm text-[#1A1A2E] font-medium">{usuario.email}</p>
+                <p className="text-sm text-[#1A1A2E] font-medium">{safeEmail || '—'}</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -206,7 +219,7 @@ export default function PerfilPage() {
               </div>
               <div>
                 <p className="text-xs text-[#6B7280]">Telefone</p>
-                <p className="text-sm text-[#1A1A2E] font-medium">{usuario.telefone}</p>
+                <p className="text-sm text-[#1A1A2E] font-medium">{safeTelefone || '—'}</p>
               </div>
             </div>
           </div>
@@ -217,7 +230,7 @@ export default function PerfilPage() {
             </div>
             <div>
               <p className="text-xs text-[#6B7280]">Localização</p>
-              <p className="text-sm text-[#1A1A2E] font-medium">{usuario.cidade} - {usuario.estado}</p>
+              <p className="text-sm text-[#1A1A2E] font-medium">{safeCidade && safeEstado ? `${safeCidade} - ${safeEstado}` : '—'}</p>
             </div>
           </div>
         </CardContent>
@@ -250,7 +263,7 @@ export default function PerfilPage() {
       </Card>
 
       {/* Bombas list (Dono de Bomba only) */}
-      {usuario.tipo === 'dono_bomba' && (
+      {safeTipo === 'dono_bomba' && (
         <Card>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
