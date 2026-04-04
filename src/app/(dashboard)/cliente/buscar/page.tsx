@@ -267,8 +267,8 @@ export default function ClienteBuscarPage() {
     try {
       const { error } = await supabase.from('solicitacoes').insert({
         uid_cliente: uid,
-        nome_cliente: usuario.nome,
-        telefone_cliente: usuario.telefone || '',
+        nome_cliente: usuario?.nome ?? '',
+        telefone_cliente: usuario?.telefone || '',
         uid_dono_bomba: selectedBomba.uid_dono,
         nome_dono_bomba: selectedBomba.nome_dono,
         uid_bomba: selectedBomba.id,
