@@ -42,6 +42,7 @@ export type Solicitacao = {
   status: 'agendado' | 'finalizado' | 'cancelado' | 'aceita' | 'pendente' | 'recusada' | 'aguardando_confirmacao';
   // Endereço da obra
   endereco_obra?: string;
+  bairro_obra?: string;
   cidade_obra?: string;
   estado_obra?: string;
   cep_obra?: string;
