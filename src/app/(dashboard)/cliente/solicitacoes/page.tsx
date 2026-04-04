@@ -635,6 +635,7 @@ export default function ClienteSolicitacoesPage() {
             </div>
           )}
         </DialogContent>
+        </div>
       </Dialog>
     </div>
   );
